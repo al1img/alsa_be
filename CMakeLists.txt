@@ -1,22 +1,31 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.0)
 
 project(audio_be)
 
+if (NOT XEN_INCLUDE_PATH)
+    message(FATAL_ERROR "XEN_INCLUDE_PATH is not defined")
+endif()
+
+if (NOT XEN_LIB_PATH)
+    message(FATAL_ERROR "XEN_LIB_PATH is not defined")
+endif()
+
 set(SOURCES
-	src/audio_be.cpp
-	src/BEBase.cpp
-	src/FEHandlerBase.cpp
+	src/alsa_be.cpp
+	src/BackendBase.cpp
+	src/FrontendHandlerBase.cpp
 )
 
 include_directories(
 	include
-	../sysroot_lp174/usr/include
+	${XEN_INCLUDE_PATH}
 )
 
-link_directories(/home/al1/Projects/sysroot_lp174/usr/lib)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
+
+link_directories(${XEN_LIB_PATH})
 
 add_executable(audio_be ${SOURCES})
 
 target_link_libraries(audio_be xenctrl xenstore glog)
 
-target_compile_features(audio_be PRIVATE cxx_range_for)

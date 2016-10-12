@@ -2,17 +2,17 @@
 
 #include <glog/logging.h>
 
-#include "BEAudio.hpp"
+#include "AlsaBackend.hpp"
 
 using std::exception;
 using std::runtime_error;
 using std::unique_ptr;
 
-unique_ptr<BEAudio> beAudio;
+unique_ptr<AlsaBackend> alsaBackend;
 
 void terminate (int sig, siginfo_t *info, void *ptr)
 {
-	beAudio->stop();
+	alsaBackend->stop();
 }
 
 void registerTerminate()
@@ -42,9 +42,9 @@ int main(int argc, char *argv[])
 	{
 		registerTerminate();
 
-		beAudio.reset(new BEAudio(0, "audio"));
+		alsaBackend.reset(new AlsaBackend(0, "audio"));
 
-		beAudio->run();
+		alsaBackend->run();
 	}
 	catch(const exception& e)
 	{
