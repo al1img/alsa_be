@@ -66,6 +66,7 @@ private:
 
 	std::map<int, std::unique_ptr<FrontendHandlerBase>> mFrontendHandlers;
 
+	void initXen();
 	void releaseXen();
 };
 

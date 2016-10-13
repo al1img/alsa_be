@@ -27,5 +27,5 @@ link_directories(${XEN_LIB_PATH})
 
 add_executable(audio_be ${SOURCES})
 
-target_link_libraries(audio_be xenctrl xenstore glog)
+target_link_libraries(audio_be xenctrl xenstore glog pthread)
 

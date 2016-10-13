@@ -10,9 +10,14 @@ using std::unique_ptr;
 
 unique_ptr<AlsaBackend> alsaBackend;
 
-void terminate (int sig, siginfo_t *info, void *ptr)
+void terminate(int sig, siginfo_t *info, void *ptr)
 {
 	alsaBackend->stop();
+}
+
+void segHandler(int sig)
+{
+	LOG(FATAL) << "Unknown error!";
 }
 
 void registerTerminate()
@@ -32,6 +37,8 @@ void registerTerminate()
 	{
 		throw runtime_error(strerror(errno));
 	}
+
+	signal(SIGSEGV, segHandler);
 }
 
 int main(int argc, char *argv[])

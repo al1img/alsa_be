@@ -12,43 +12,21 @@
 using std::unique_ptr;
 using std::make_pair;
 
-BackendBase::BackendBase(int domId, const std::string& deviceName, int beId) :
+BackendBase::BackendBase(int domId, const std::string& deviceName, int id) :
 	mDomId(domId),
 	mDeviceName(deviceName),
 	mXsHandle(nullptr),
 	mXcGnttab(nullptr),
-	mId(beId),
+	mId(id),
 	mTerminate(false)
 {
 	try
 	{
-		LOG(INFO) << "Create BE: " << deviceName << ", " << beId;
+		LOG(INFO) << "Create BE: " << deviceName << ", " << id;
 
-		mXcGnttab = xc_gnttab_open(NULL, 0);
-
-		if (!mXcGnttab)
-		{
-			throw BackendException("Can't open xc grant table");
-		}
-
-		mXsHandle = xs_daemon_open();
-
-		if (!mXsHandle)
-		{
-			throw BackendException("Can't open xs daemon");
-		}
-
-		char* domPath = xs_get_domain_path(mXsHandle, mDomId);
-
-		if (!domPath)
-		{
-			throw BackendException("Can't get domain path");
-		}
-
-		mXsDomPath = domPath;
-
-		free(domPath);
-
+#if 0
+		initXen();
+#endif
 	}
 	catch(const BackendException& e)
 	{
@@ -77,9 +55,20 @@ void BackendBase::run()
 		{
 			LOG(INFO) << "New FE: " << newFrontendId;
 
-			mFrontendHandlers.insert(
-					make_pair(newFrontendId, unique_ptr<FrontendHandlerBase>(
-					new FrontendHandlerBase(newFrontendId, *this))));
+			try
+			{
+				mFrontendHandlers.insert(
+						make_pair(newFrontendId, unique_ptr<FrontendHandlerBase>(
+						new FrontendHandlerBase(newFrontendId, *this))));
+
+				mFrontendHandlers[newFrontendId]->start();
+			}
+			catch(const FrontendHandlerException& e)
+			{
+				mFrontendHandlers.erase(newFrontendId);
+
+				LOG(ERROR) << e.what();
+			}
 		}
 	}
 }
@@ -87,6 +76,35 @@ void BackendBase::run()
 void BackendBase::stop()
 {
 	mTerminate = true;
+}
+
+void BackendBase::initXen()
+{
+	mXcGnttab = xc_gnttab_open(NULL, 0);
+
+	if (!mXcGnttab)
+	{
+		throw BackendException("Can't open xc grant table");
+	}
+
+	mXsHandle = xs_daemon_open();
+
+	if (!mXsHandle)
+	{
+		throw BackendException("Can't open xs daemon");
+	}
+
+	char* domPath = xs_get_domain_path(mXsHandle, mDomId);
+
+	if (!domPath)
+	{
+		throw BackendException("Can't get domain path");
+	}
+
+	mXsDomPath = domPath;
+
+	free(domPath);
+
 }
 
 void BackendBase::releaseXen()
