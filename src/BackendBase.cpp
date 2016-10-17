@@ -1,8 +1,21 @@
 /*
- * BackendBase.cpp
+ *  Xen backend base class
+ *  Copyright (c) 2016, Oleksandr Grytsov
  *
- *  Created on: Oct 11, 2016
- *      Author: al1
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 2 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+ *
  */
 
 #include "BackendBase.hpp"
@@ -24,9 +37,7 @@ BackendBase::BackendBase(int domId, const std::string& deviceName, int id) :
 	{
 		LOG(INFO) << "Create BE: " << deviceName << ", " << id;
 
-#if 0
 		initXen();
-#endif
 	}
 	catch(const BackendException& e)
 	{
@@ -42,7 +53,7 @@ BackendBase::~BackendBase()
 
 	releaseXen();
 
-	LOG(INFO) << "Delete BE: " << mDeviceName << ", " << mId;
+	LOG(INFO) << "Delete backend: " << mDeviceName << ", " << mId;
 }
 
 void BackendBase::run()
@@ -53,7 +64,7 @@ void BackendBase::run()
 
 		if (mFrontendHandlers.find(newFrontendId) == mFrontendHandlers.end())
 		{
-			LOG(INFO) << "New FE: " << newFrontendId;
+			LOG(INFO) << "New frontend: " << newFrontendId;
 
 			try
 			{
@@ -80,7 +91,7 @@ void BackendBase::stop()
 
 void BackendBase::initXen()
 {
-	mXcGnttab = xc_gnttab_open(NULL, 0);
+	mXcGnttab = xc_gnttab_open(nullptr, 0);
 
 	if (!mXcGnttab)
 	{

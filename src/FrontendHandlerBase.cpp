@@ -1,8 +1,21 @@
 /*
- * FrontendHandlerBase.cpp
+ *  Xen base frontend handler
+ *  Copyright (c) 2016, Oleksandr Grytsov
  *
- *  Created on: Oct 11, 2016
- *      Author: al1
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 2 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+ *
  */
 
 #include "FrontendHandlerBase.hpp"
@@ -40,10 +53,7 @@ FrontendHandlerBase::FrontendHandlerBase(int domId, const BackendBase& backend) 
 	{
 		LOG(INFO) << "Create frontend handler: " << mDomId;
 
-#if 0
 		initXsPathes();
-#endif
-
 	}
 	catch(const FrontendHandlerException& e)
 	{
@@ -85,6 +95,16 @@ void FrontendHandlerBase::stop()
 	}
 }
 
+void FrontendHandlerBase::onBind()
+{
+	LOG(INFO) << "On bind frontend handler: " << mDomId;
+}
+
+void FrontendHandlerBase::bindChannel(const std::string& name)
+{
+
+}
+
 void FrontendHandlerBase::run()
 {
 	try
@@ -95,11 +115,13 @@ void FrontendHandlerBase::run()
 
 		waitForFrontendInitialized();
 
-		// TODO: bind
+		onBind();
 
 		setState(XenbusStateConnected);
 
 		waitForFrontendConnected();
+
+		LOG(INFO) << "Initialization completed: " << mDomId;
 
 		while(!mTerminate)
 		{
@@ -133,6 +155,7 @@ void FrontendHandlerBase::initXsPathes()
 
 	mXsFrontendPath = ss.str();
 
+	ss.str("");
 	ss.clear();
 
 	ss << mBackend.getXsDomPath() << "/backend/" << mBackend.getDeviceName() << "/" <<
@@ -141,7 +164,7 @@ void FrontendHandlerBase::initXsPathes()
 	mXsBackendPath = ss.str();
 
 	LOG(INFO) << "Frontend path: " << mXsFrontendPath;
-	LOG(INFO) << "Backend path: " << mXsBackendPath;
+	LOG(INFO) << "Backend path:  " << mXsBackendPath;
 }
 
 void FrontendHandlerBase::waitForBackendInitialized()
@@ -181,16 +204,16 @@ xenbus_state FrontendHandlerBase::getState(const string& nodePath)
 {
 	auto path = nodePath + "/state";
 
-	auto pData = static_cast<char*>(xs_read(mBackend.getXsHandle(), XBT_NULL, path.c_str(), NULL));
+	unsigned length;
 
-	string result = pData;
+	auto pData = static_cast<char*>(xs_read(mBackend.getXsHandle(), XBT_NULL, path.c_str(), &length));
 
 	if (!pData)
 	{
-		throw FrontendHandlerException("Can't read status from: " + nodePath);
+		throw FrontendHandlerException("Can't read status from: " + path);
 	}
 
-	result = pData;
+	string result(pData);
 
 	free(pData);
 
@@ -199,14 +222,29 @@ xenbus_state FrontendHandlerBase::getState(const string& nodePath)
 
 xenbus_state FrontendHandlerBase::waitForState(const string& nodePath, const vector<xenbus_state>& states)
 {
-	while(true)
+	while(!mTerminate)
 	{
-		xenbus_state state = getState(mXsBackendPath);
+		xenbus_state state = getState(nodePath);
 
 		if (find(states.begin(), states.end(), state) != states.end())
 		{
 			return state;
 		}
+
+		while(!mTerminate)
+		{
+			auto result = xs_check_watch(mBackend.getXsHandle());
+
+			if (result)
+			{
+				free(result);
+
+				break;
+			}
+		}
+
+#if 0
+		// Can't unblock xs_read_watch on close. Above implementation used (xs_check_watch).
 
 		unsigned dummy;
 
@@ -218,11 +256,15 @@ xenbus_state FrontendHandlerBase::waitForState(const string& nodePath, const vec
 		}
 
 		free(result);
+#endif
+
 	}
 }
 
 void FrontendHandlerBase::setState(xenbus_state state)
 {
+	LOG(INFO) << "Set backend state to: " << state;
+
 	auto key = mXsBackendPath + "/state";
 	auto value = to_string(state);
 
@@ -234,7 +276,8 @@ void FrontendHandlerBase::setState(xenbus_state state)
 
 void FrontendHandlerBase::setXsWatches()
 {
-#if 0
+	LOG(INFO) << "Set XS watches: " << mDomId;
+
 	if (!xs_watch(mBackend.getXsHandle(), mXsBackendPath.c_str(), ""))
 	{
 		throw FrontendHandlerException("Can't set xs watch for backend");
@@ -244,13 +287,13 @@ void FrontendHandlerBase::setXsWatches()
 	{
 		throw FrontendHandlerException("Can't set xs watch for frontend");
 	}
-#endif
 }
 
 void FrontendHandlerBase::clearXsWatches()
 {
-#if 0
+	LOG(INFO) << "Clear XS watches: " << mDomId;
+
 	xs_unwatch(mBackend.getXsHandle(), mXsBackendPath.c_str(), "");
+
 	xs_unwatch(mBackend.getXsHandle(), mXsFrontendPath.c_str(), "");
-#endif
 }
