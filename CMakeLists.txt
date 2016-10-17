@@ -13,6 +13,7 @@ endif()
 set(SOURCES
 	src/alsa_be.cpp
 	src/BackendBase.cpp
+	src/ChannelBase.cpp
 	src/FrontendHandlerBase.cpp
 )
 

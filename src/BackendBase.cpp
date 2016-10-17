@@ -35,7 +35,7 @@ BackendBase::BackendBase(int domId, const std::string& deviceName, int id) :
 {
 	try
 	{
-		LOG(INFO) << "Create BE: " << deviceName << ", " << id;
+		LOG(INFO) << "Create backend: " << deviceName << ", " << id;
 
 		initXen();
 	}

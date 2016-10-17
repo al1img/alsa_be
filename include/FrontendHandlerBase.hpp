@@ -51,6 +51,7 @@ class FrontendHandlerBase
 public:
 	FrontendHandlerBase(int domId, const BackendBase& backend);
 	virtual ~FrontendHandlerBase();
+
 	void start();
 	void stop();
 

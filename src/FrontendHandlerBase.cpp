@@ -210,7 +210,7 @@ xenbus_state FrontendHandlerBase::getState(const string& nodePath)
 
 	if (!pData)
 	{
-		throw FrontendHandlerException("Can't read status from: " + path);
+		throw FrontendHandlerException("Can't read state from: " + path);
 	}
 
 	string result(pData);
