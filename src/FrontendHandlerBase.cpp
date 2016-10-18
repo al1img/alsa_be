@@ -44,9 +44,10 @@ using std::thread;
 using std::to_string;
 using std::vector;
 
-FrontendHandlerBase::FrontendHandlerBase(int domId, const BackendBase& backend) :
+FrontendHandlerBase::FrontendHandlerBase(int domId, BackendBase& backend, XenStore& xenStore) :
 	mDomId(domId),
 	mBackend(backend),
+	mXenStore(xenStore),
 	mTerminate(false)
 {
 	try
@@ -100,7 +101,7 @@ void FrontendHandlerBase::onBind()
 	LOG(INFO) << "On bind frontend handler: " << mDomId;
 }
 
-void FrontendHandlerBase::bindChannel(const std::string& name)
+void FrontendHandlerBase::bindChannel(const string& name)
 {
 
 }
@@ -111,13 +112,13 @@ void FrontendHandlerBase::run()
 	{
 		waitForBackendInitialized();
 
-		setState(XenbusStateInitWait);
+		setBackendState(XenbusStateInitWait);
 
 		waitForFrontendInitialized();
 
 		onBind();
 
-		setState(XenbusStateConnected);
+		setBackendState(XenbusStateConnected);
 
 		waitForFrontendConnected();
 
@@ -138,16 +139,7 @@ void FrontendHandlerBase::run()
 
 void FrontendHandlerBase::initXsPathes()
 {
-	auto domPath = xs_get_domain_path(mBackend.getXsHandle(), mDomId);
-
-	if (!domPath)
-	{
-		throw FrontendHandlerException("Can't get domain path");
-	}
-
-	mXsDomPath = domPath;
-
-	free(domPath);
+	mXsDomPath = mXenStore.getDomainPath(mDomId);
 
 	stringstream ss;
 
@@ -200,47 +192,19 @@ void FrontendHandlerBase::waitForFrontendConnected()
 	waitForState(mXsFrontendPath, {XenbusStateConnected});
 }
 
-xenbus_state FrontendHandlerBase::getState(const string& nodePath)
-{
-	auto path = nodePath + "/state";
-
-	unsigned length;
-
-	auto pData = static_cast<char*>(xs_read(mBackend.getXsHandle(), XBT_NULL, path.c_str(), &length));
-
-	if (!pData)
-	{
-		throw FrontendHandlerException("Can't read state from: " + path);
-	}
-
-	string result(pData);
-
-	free(pData);
-
-	return static_cast<xenbus_state>(stoi(result));
-}
-
 xenbus_state FrontendHandlerBase::waitForState(const string& nodePath, const vector<xenbus_state>& states)
 {
 	while(!mTerminate)
 	{
-		xenbus_state state = getState(nodePath);
+		xenbus_state state = static_cast<xenbus_state>(mXenStore.readInt(nodePath + "/state"));
 
 		if (find(states.begin(), states.end(), state) != states.end())
 		{
 			return state;
 		}
 
-		while(!mTerminate)
+		while(!mTerminate && !mXenStore.checkWatches())
 		{
-			auto result = xs_check_watch(mBackend.getXsHandle());
-
-			if (result)
-			{
-				free(result);
-
-				break;
-			}
 		}
 
 #if 0
@@ -261,39 +225,27 @@ xenbus_state FrontendHandlerBase::waitForState(const string& nodePath, const vec
 	}
 }
 
-void FrontendHandlerBase::setState(xenbus_state state)
+void FrontendHandlerBase::setBackendState(xenbus_state state)
 {
 	LOG(INFO) << "Set backend state to: " << state;
 
-	auto key = mXsBackendPath + "/state";
-	auto value = to_string(state);
+	auto path = mXsBackendPath + "/state";
 
-	if (!xs_write(mBackend.getXsHandle(), XBT_NULL, key.c_str(), value.c_str(), value.length()))
-	{
-		throw FrontendHandlerException("Can't write state");
-	}
+	mXenStore.writeInt(path, state);
 }
 
 void FrontendHandlerBase::setXsWatches()
 {
 	LOG(INFO) << "Set XS watches: " << mDomId;
 
-	if (!xs_watch(mBackend.getXsHandle(), mXsBackendPath.c_str(), ""))
-	{
-		throw FrontendHandlerException("Can't set xs watch for backend");
-	}
-
-	if (!xs_watch(mBackend.getXsHandle(), mXsFrontendPath.c_str(), ""))
-	{
-		throw FrontendHandlerException("Can't set xs watch for frontend");
-	}
+	mXenStore.setWatch(mXsBackendPath);
+	mXenStore.setWatch(mXsFrontendPath);
 }
 
 void FrontendHandlerBase::clearXsWatches()
 {
 	LOG(INFO) << "Clear XS watches: " << mDomId;
 
-	xs_unwatch(mBackend.getXsHandle(), mXsBackendPath.c_str(), "");
-
-	xs_unwatch(mBackend.getXsHandle(), mXsFrontendPath.c_str(), "");
+	mXenStore.clearWatch(mXsBackendPath);
+	mXenStore.clearWatch(mXsFrontendPath);
 }

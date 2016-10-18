@@ -24,7 +24,7 @@
 
 using std::string;
 
-ChannelBase::ChannelBase(const std::string& name) :
+ChannelBase::ChannelBase(const std::string& name, FrontendHandlerBase& frontendHandler, XenStore& xenStore) :
 	mName(name),
 	mEventChannel(nullptr)
 {
@@ -58,10 +58,4 @@ void ChannelBase::releaseXen()
 	{
 		xc_evtchn_close(mEventChannel);
 	}
-}
-
-template<typename T>
-Channel<T>::Channel(const string& name, int ringSize) : ChannelBase(name)
-{
-
 }

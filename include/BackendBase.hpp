@@ -29,11 +29,11 @@
 
 extern "C"
 {
-	#include "xenstore.h"
 	#include "xenctrl.h"
 }
 
 #include "FrontendHandlerBase.hpp"
+#include "XenStore.hpp"
 
 class BackendException : public std::exception
 {
@@ -55,7 +55,6 @@ public:
 	void run();
 	void stop();
 
-	xs_handle* getXsHandle() const { return mXsHandle; }
 	const std::string& getDeviceName() const { return mDeviceName; }
 	const std::string& getXsDomPath() const { return mXsDomPath; }
 	int getId() const { return mId; }
@@ -70,12 +69,13 @@ private:
 	int			mDomId;
 	std::string mDeviceName;
 
-	xs_handle*	mXsHandle;
 	xc_gnttab*	mXcGnttab;
 
 	std::string mXsDomPath;
 
 	std::atomic_bool mTerminate;
+
+	XenStore	mXenStore;
 
 	std::map<int, std::unique_ptr<FrontendHandlerBase>> mFrontendHandlers;
 

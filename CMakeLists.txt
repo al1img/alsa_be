@@ -15,6 +15,7 @@ set(SOURCES
 	src/BackendBase.cpp
 	src/ChannelBase.cpp
 	src/FrontendHandlerBase.cpp
+	src/XenStore.cpp
 )
 
 include_directories(

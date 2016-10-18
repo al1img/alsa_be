@@ -22,29 +22,27 @@
 
 #include <glog/logging.h>
 
-using std::unique_ptr;
 using std::make_pair;
+using std::unique_ptr;
+using std::string;
 
-BackendBase::BackendBase(int domId, const std::string& deviceName, int id) :
+BackendBase::BackendBase(int domId, const string& deviceName, int id) try :
 	mDomId(domId),
 	mDeviceName(deviceName),
-	mXsHandle(nullptr),
 	mXcGnttab(nullptr),
 	mId(id),
-	mTerminate(false)
+	mTerminate(false),
+	mXenStore()
 {
-	try
-	{
-		LOG(INFO) << "Create backend: " << deviceName << ", " << id;
+	LOG(INFO) << "Create backend: " << deviceName << ", " << id;
 
-		initXen();
-	}
-	catch(const BackendException& e)
-	{
-		releaseXen();
+	initXen();
+}
+catch(const BackendException& e)
+{
+	releaseXen();
 
-		throw;
-	}
+	throw;
 }
 
 BackendBase::~BackendBase()
@@ -70,7 +68,7 @@ void BackendBase::run()
 			{
 				mFrontendHandlers.insert(
 						make_pair(newFrontendId, unique_ptr<FrontendHandlerBase>(
-						new FrontendHandlerBase(newFrontendId, *this))));
+						new FrontendHandlerBase(newFrontendId, *this, mXenStore))));
 
 				mFrontendHandlers[newFrontendId]->start();
 			}
@@ -98,33 +96,11 @@ void BackendBase::initXen()
 		throw BackendException("Can't open xc grant table");
 	}
 
-	mXsHandle = xs_daemon_open();
-
-	if (!mXsHandle)
-	{
-		throw BackendException("Can't open xs daemon");
-	}
-
-	char* domPath = xs_get_domain_path(mXsHandle, mDomId);
-
-	if (!domPath)
-	{
-		throw BackendException("Can't get domain path");
-	}
-
-	mXsDomPath = domPath;
-
-	free(domPath);
-
+	mXsDomPath = mXenStore.getDomainPath(mDomId);
 }
 
 void BackendBase::releaseXen()
 {
-	if (mXsHandle)
-	{
-		xs_daemon_close(mXsHandle);
-	}
-
 	if (mXcGnttab)
 	{
 		xc_gnttab_close(mXcGnttab);

@@ -34,6 +34,7 @@ extern "C"
 }
 
 class BackendBase;
+class XenStore;
 
 class FrontendHandlerException : public std::exception
 {
@@ -49,7 +50,7 @@ private:
 class FrontendHandlerBase
 {
 public:
-	FrontendHandlerBase(int domId, const BackendBase& backend);
+	FrontendHandlerBase(int domId, BackendBase& backend, XenStore& xenStore);
 	virtual ~FrontendHandlerBase();
 
 	void start();
@@ -61,7 +62,8 @@ public:
 
 private:
 	int mDomId;
-	const BackendBase& mBackend;
+	BackendBase& mBackend;
+	XenStore& mXenStore;
 
 	std::string mXsDomPath;
 	std::string mXsBackendPath;
@@ -80,10 +82,9 @@ private:
 	void waitForFrontendInitialized();
 	void waitForFrontendConnected();
 
-	xenbus_state getState(const std::string& nodePath);
 	xenbus_state waitForState(const std::string& nodePath, const std::vector<xenbus_state>& states);
 
-	void setState(xenbus_state state);
+	void setBackendState(xenbus_state state);
 
 	void setXsWatches();
 	void clearXsWatches();

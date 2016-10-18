@@ -1,5 +1,5 @@
 /*
- *  Xen backend channel base class
+ *  Xen Store wrapper
  *  Copyright (c) 2016, Oleksandr Grytsov
  *
  *   This program is free software; you can redistribute it and/or modify
@@ -18,20 +18,21 @@
  *
  */
 
-#ifndef INCLUDE_CHANNELBASE_HPP_
-#define INCLUDE_CHANNELBASE_HPP_
+#ifndef INCLUDE_XENSTORE_HPP_
+#define INCLUDE_XENSTORE_HPP_
 
+#include <exception>
 #include <string>
 
 extern "C"
 {
-	#include <xenctrl.h>
+	#include "xenstore.h"
 }
 
-class ChannelException : public std::exception
+class XenStoreException : public std::exception
 {
 public:
-	ChannelException(const std::string& msg) : mMsg(msg) {};
+	XenStoreException(const std::string& msg) : mMsg(msg) {};
 
 	const char* what() const throw() { return mMsg.c_str(); };
 
@@ -39,34 +40,25 @@ private:
 	std::string mMsg;
 };
 
-class FrontendHandlerBase;
-class XenStore;
-
-class ChannelBase
+class XenStore
 {
 public:
-	ChannelBase(const std::string& name, FrontendHandlerBase& frontendHandler, XenStore& xenStore);
+	XenStore();
+	~XenStore();
+
+	std::string getDomainPath(int domId);
+	int readInt(const std::string& path);
+	void writeInt(const std::string& path, int value);
+
+	void setWatch(const std::string& path);
+	void clearWatch(const std::string& path);
+	bool checkWatches();
 
 private:
-	std::string mName;
+	xs_handle*	mXsHandle;
 
-	xc_evtchn *mEventChannel;
-	int mRefs;
-	int mPort;
-
-	void initXen();
-	void releaseXen();
+	void initHandle();
+	void releaseHandle();
 };
 
-template<typename T>
-class Channel : public ChannelBase
-{
-public:
-	Channel(const std::string& name, FrontendHandlerBase& frontendHandler, XenStore& xenStore, int ringSize);
-	virtual ~Channel();
-
-private:
-	T mRing;
-};
-
-#endif /* INCLUDE_CHANNELBASE_HPP_ */
+#endif /* INCLUDE_XENSTORE_HPP_ */
