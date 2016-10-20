@@ -29,6 +29,11 @@ using std::runtime_error;
 using std::shared_ptr;
 using std::unique_ptr;
 
+using XenBackend::DataChannelBase;
+using XenBackend::EventChannel;
+using XenBackend::FrontendHandlerBase;
+using XenBackend::RingBuffer;
+
 unique_ptr<AlsaBackend> alsaBackend;
 
 ControlChannel::ControlChannel(FrontendHandlerBase& frontendHandler) :

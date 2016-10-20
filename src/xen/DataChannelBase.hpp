@@ -27,6 +27,8 @@
 #include <string>
 #include <thread>
 
+namespace XenBackend {
+
 class EventChannel;
 class RingBuffer;
 
@@ -67,5 +69,7 @@ private:
 
 	void run();
 };
+
+}
 
 #endif /* INCLUDE_DATACHANNELBASE_HPP_ */

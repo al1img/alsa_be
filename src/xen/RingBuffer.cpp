@@ -27,6 +27,8 @@
 
 using std::string;
 
+namespace XenBackend {
+
 RingBuffer::RingBuffer(FrontendHandlerBase& frontendHandler, const std::string& ringRefPath) :
 	mFrontendHandler(frontendHandler),
 	mDomId(frontendHandler.getDomId()),
@@ -63,3 +65,6 @@ void RingBuffer::releaseXen()
 {
 
 }
+
+}
+

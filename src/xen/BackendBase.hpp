@@ -35,6 +35,8 @@ extern "C"
 #include "FrontendHandlerBase.hpp"
 #include "XenStore.hpp"
 
+namespace XenBackend {
+
 class BackendException : public std::exception
 {
 public:
@@ -85,5 +87,7 @@ private:
 	void initXen();
 	void releaseXen();
 };
+
+}
 
 #endif /* INCLUDE_BACKENDBASE_HPP_ */

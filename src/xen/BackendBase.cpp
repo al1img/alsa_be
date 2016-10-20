@@ -27,6 +27,8 @@ using std::unique_ptr;
 using std::shared_ptr;
 using std::string;
 
+namespace XenBackend {
+
 BackendBase::BackendBase(int domId, const string& deviceName, int id) try :
 	mId(id),
 	mDomId(domId),
@@ -111,4 +113,6 @@ void BackendBase::releaseXen()
 	{
 		xc_gnttab_close(mXcGnttab);
 	}
+}
+
 }

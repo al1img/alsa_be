@@ -29,6 +29,8 @@ extern "C"
 	#include "xenstore.h"
 }
 
+namespace XenBackend {
+
 class XenStoreException : public std::exception
 {
 public:
@@ -63,5 +65,7 @@ private:
 	void initHandle();
 	void releaseHandle();
 };
+
+}
 
 #endif /* INCLUDE_XENSTORE_HPP_ */

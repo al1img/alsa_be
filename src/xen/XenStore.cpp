@@ -23,6 +23,8 @@
 
 #include <glog/logging.h>
 
+namespace XenBackend {
+
 using std::string;
 using std::to_string;
 
@@ -164,4 +166,6 @@ void XenStore::releaseHandle()
 	{
 		xs_daemon_close(mXsHandle);
 	}
+}
+
 }

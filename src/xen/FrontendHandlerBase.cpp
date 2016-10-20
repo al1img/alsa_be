@@ -46,6 +46,8 @@ using std::thread;
 using std::to_string;
 using std::vector;
 
+namespace XenBackend {
+
 FrontendHandlerBase::FrontendHandlerBase(int domId, BackendBase& backend, XenStore& xenStore, int id) :
 	mId(id),
 	mDomId(domId),
@@ -254,4 +256,6 @@ void FrontendHandlerBase::setBackendState(xenbus_state state)
 	auto path = mXsBackendPath + "/state";
 
 	mXenStore.writeInt(path, state);
+}
+
 }

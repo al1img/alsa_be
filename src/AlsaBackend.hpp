@@ -32,29 +32,30 @@ extern "C"
 #include "CustomRingBuffer.hpp"
 #include "FrontendHandlerBase.hpp"
 
-class ControlChannel : public CustomRingBuffer<xen_vsndif_ctrl_back_ring,
-											   xen_vsndif_ctrl_sring,
-											   xen_vsndif_ctrl_request,
-											   xen_vsndif_ctrl_response>
+class ControlChannel : public XenBackend::CustomRingBuffer<
+											xen_vsndif_ctrl_back_ring,
+											xen_vsndif_ctrl_sring,
+											xen_vsndif_ctrl_request,
+											xen_vsndif_ctrl_response>
 {
 public:
-	ControlChannel(FrontendHandlerBase& frontendHandler);
+	ControlChannel(XenBackend::FrontendHandlerBase& frontendHandler);
 
 private:
 	void processRequest(const xen_vsndif_ctrl_request& req);
 };
 
-class AlsaFrontendHandler : public FrontendHandlerBase
+class AlsaFrontendHandler : public XenBackend::FrontendHandlerBase
 {
-	using FrontendHandlerBase::FrontendHandlerBase;
+	using XenBackend::FrontendHandlerBase::FrontendHandlerBase;
 
 private:
 	void onBind();
 };
 
-class AlsaBackend : public BackendBase
+class AlsaBackend : public XenBackend::BackendBase
 {
-	using BackendBase::BackendBase;
+	using XenBackend::BackendBase::BackendBase;
 
 private:
 

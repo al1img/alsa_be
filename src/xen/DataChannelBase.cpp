@@ -36,6 +36,8 @@ using std::shared_ptr;
 using std::string;
 using std::thread;
 
+namespace XenBackend {
+
 DataChannelBase::DataChannelBase(const string& name, shared_ptr<EventChannel> eventChannel, shared_ptr<RingBuffer> ringBuffer) :
 	mName(name),
 	mEventChannel(eventChannel),
@@ -92,4 +94,6 @@ void DataChannelBase::run()
 	{
 		LOG(ERROR) << e.what();
 	}
+}
+
 }

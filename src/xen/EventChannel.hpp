@@ -29,6 +29,8 @@ extern "C"
 	#include <xenctrl.h>
 }
 
+namespace XenBackend {
+
 class FrontendHandlerBase;
 class XenStore;
 
@@ -66,5 +68,7 @@ private:
 	void initXen();
 	void releaseXen();
 };
+
+}
 
 #endif /* INCLUDE_EVENTCHANNEL_HPP_ */

@@ -29,6 +29,8 @@
 
 using std::string;
 
+namespace XenBackend {
+
 EventChannel::EventChannel(FrontendHandlerBase& frontendHandler, const std::string& eventChannelPath) :
 	mFrontendHandler(frontendHandler),
 	mDomId(frontendHandler.getDomId()),
@@ -140,4 +142,6 @@ void EventChannel::releaseXen()
 	{
 		xc_evtchn_close(mEventChannel);
 	}
+}
+
 }

@@ -32,6 +32,8 @@ extern "C"
 	#include <xenctrl.h>
 }
 
+namespace XenBackend {
+
 template<typename Ring, typename SRing, typename Req, typename Rsp>
 class CustomRingBuffer : public RingBuffer
 {
@@ -124,5 +126,7 @@ private:
 		} while (numPendingRequests);
 	}
 };
+
+}
 
 #endif /* INCLUDE_CUSTOMRINGBUFFER_HPP_ */

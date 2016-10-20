@@ -25,6 +25,8 @@
 #include <functional>
 #include <string>
 
+namespace XenBackend {
+
 class FrontendHandlerBase;
 class XenStore;
 
@@ -61,5 +63,7 @@ private:
 	void initXen();
 	void releaseXen();
 };
+
+}
 
 #endif /* INCLUDE_RINGBUFFER_HPP_ */

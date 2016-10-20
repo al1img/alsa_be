@@ -38,6 +38,8 @@ extern "C"
 
 #include "DataChannelBase.hpp"
 
+namespace XenBackend {
+
 class BackendBase;
 class XenStore;
 
@@ -100,5 +102,6 @@ private:
 	void setBackendState(xenbus_state state);
 };
 
+}
 
 #endif /* INCLUDE_FRONTENDHANDLERBASE_HPP_ */
