@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.0)
 
-project(audio_be)
+project(alsa_be)
 
-if (NOT 	)
+if (NOT XEN_INCLUDE_PATH)
     message(FATAL_ERROR "XEN_INCLUDE_PATH is not defined")
 endif()
 
@@ -15,17 +15,18 @@ if (NOT IF_INCLUDE_PATH)
 endif()
 
 set(SOURCES
-	src/alsa_be.cpp
-	src/BackendBase.cpp
-	src/DataChannelBase.cpp
-	src/EventChannel.cpp
-	src/FrontendHandlerBase.cpp
-	src/RingBuffer.cpp
-	src/XenStore.cpp
+	src/xen/BackendBase.cpp
+	src/xen/DataChannelBase.cpp
+	src/xen/EventChannel.cpp
+	src/xen/FrontendHandlerBase.cpp
+	src/xen/RingBuffer.cpp
+	src/xen/XenStore.cpp
+	src/AlsaBackend.cpp
 )
 
 include_directories(
-	include
+	src
+	src/xen
 	${XEN_INCLUDE_PATH}
 	${IF_INCLUDE_PATH}
 )
@@ -34,7 +35,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
 
 link_directories(${XEN_LIB_PATH})
 
-add_executable(audio_be ${SOURCES})
+add_executable(alsa_be ${SOURCES})
 
-target_link_libraries(audio_be xenctrl xenstore glog pthread)
+target_link_libraries(alsa_be xenctrl xenstore glog pthread)
 

@@ -22,13 +22,50 @@
 
 #include <glog/logging.h>
 
-#include "../include/AlsaBackend.hpp"
+#include "AlsaBackend.hpp"
 
 using std::exception;
 using std::runtime_error;
+using std::shared_ptr;
 using std::unique_ptr;
 
 unique_ptr<AlsaBackend> alsaBackend;
+
+ControlChannel::ControlChannel(FrontendHandlerBase& frontendHandler) :
+	CustomRingBuffer<xen_vsndif_ctrl_back_ring,
+					 xen_vsndif_ctrl_sring,
+					 xen_vsndif_ctrl_request,
+					 xen_vsndif_ctrl_response>(frontendHandler, "ring-ref", 4096)
+{
+
+}
+
+void ControlChannel::processRequest(const xen_vsndif_ctrl_request& req)
+{
+	LOG(INFO) << "Request received: " << req.operation;
+
+	xen_vsndif_ctrl_response rsp { .operation = req.operation, .status = 1 };
+
+	sendResponse(rsp);
+}
+
+void AlsaFrontendHandler::onBind()
+{
+	shared_ptr<EventChannel> eventChannel(new EventChannel(*this, "evt-chnl"));
+	shared_ptr<RingBuffer> ringBuffer(new ControlChannel(*this));
+
+	addChannel(shared_ptr<DataChannelBase>(new DataChannelBase("ctrl", eventChannel, ringBuffer)));
+}
+
+int AlsaBackend::getNewFrontendId()
+{
+	return 1;
+}
+
+void AlsaBackend::onNewFrontend(int domId)
+{
+	addFrontendHandler(shared_ptr<FrontendHandlerBase>(new AlsaFrontendHandler(domId, *this, getXenStore())));
+}
 
 void terminate(int sig, siginfo_t *info, void *ptr)
 {
