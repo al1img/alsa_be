@@ -24,13 +24,14 @@
 
 using std::make_pair;
 using std::unique_ptr;
+using std::shared_ptr;
 using std::string;
 
 BackendBase::BackendBase(int domId, const string& deviceName, int id) try :
+	mId(id),
 	mDomId(domId),
 	mDeviceName(deviceName),
 	mXcGnttab(nullptr),
-	mId(id),
 	mTerminate(false),
 	mXenStore()
 {
@@ -66,11 +67,7 @@ void BackendBase::run()
 
 			try
 			{
-				mFrontendHandlers.insert(
-						make_pair(newFrontendId, unique_ptr<FrontendHandlerBase>(
-						new FrontendHandlerBase(newFrontendId, *this, mXenStore))));
-
-				mFrontendHandlers[newFrontendId]->start();
+				onNewFrontend(newFrontendId);
 			}
 			catch(const FrontendHandlerException& e)
 			{
@@ -85,6 +82,15 @@ void BackendBase::run()
 void BackendBase::stop()
 {
 	mTerminate = true;
+}
+
+void BackendBase::addFrontendHandler(const shared_ptr<FrontendHandlerBase> frontendHandler)
+{
+	auto domId = frontendHandler->getDomId();
+
+	mFrontendHandlers.insert(make_pair(domId, frontendHandler));
+
+	mFrontendHandlers[domId]->start();
 }
 
 void BackendBase::initXen()

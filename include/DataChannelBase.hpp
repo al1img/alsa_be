@@ -18,20 +18,22 @@
  *
  */
 
-#ifndef INCLUDE_CHANNELBASE_HPP_
-#define INCLUDE_CHANNELBASE_HPP_
+#ifndef INCLUDE_DATACHANNELBASE_HPP_
+#define INCLUDE_DATACHANNELBASE_HPP_
 
+#include <atomic>
+#include <memory>
+#include <mutex>
 #include <string>
+#include <thread>
 
-extern "C"
-{
-	#include <xenctrl.h>
-}
+class EventChannel;
+class RingBuffer;
 
-class ChannelException : public std::exception
+class DataChannelException : public std::exception
 {
 public:
-	ChannelException(const std::string& msg) : mMsg(msg) {};
+	DataChannelException(const std::string& msg) : mMsg(msg) {};
 
 	const char* what() const throw() { return mMsg.c_str(); };
 
@@ -42,31 +44,28 @@ private:
 class FrontendHandlerBase;
 class XenStore;
 
-class ChannelBase
+class DataChannelBase
 {
 public:
-	ChannelBase(const std::string& name, FrontendHandlerBase& frontendHandler, XenStore& xenStore);
+	DataChannelBase(const std::string& name, std::shared_ptr<EventChannel> eventChannel, std::shared_ptr<RingBuffer> ringBuffer);
+	virtual ~DataChannelBase();
+
+	void start();
+	void stop();
+
+	const std::string& getName() const { return mName; }
 
 private:
 	std::string mName;
 
-	xc_evtchn *mEventChannel;
-	int mRefs;
-	int mPort;
+	std::shared_ptr<EventChannel> mEventChannel;
+	std::shared_ptr<RingBuffer> mRingBuffer;
 
-	void initXen();
-	void releaseXen();
+	std::thread mThread;
+	std::mutex mMutex;
+	std::atomic_bool mTerminate;
+
+	void run();
 };
 
-template<typename T>
-class Channel : public ChannelBase
-{
-public:
-	Channel(const std::string& name, FrontendHandlerBase& frontendHandler, XenStore& xenStore, int ringSize);
-	virtual ~Channel();
-
-private:
-	T mRing;
-};
-
-#endif /* INCLUDE_CHANNELBASE_HPP_ */
+#endif /* INCLUDE_DATACHANNELBASE_HPP_ */

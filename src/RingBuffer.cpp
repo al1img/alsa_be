@@ -1,5 +1,5 @@
 /*
- *  Xen backend channel base class
+ *  Xen ring buffer
  *  Copyright (c) 2016, Oleksandr Grytsov
  *
  *   This program is free software; you can redistribute it and/or modify
@@ -18,23 +18,28 @@
  *
  */
 
-#include "ChannelBase.hpp"
+#include "RingBuffer.hpp"
 
 #include <glog/logging.h>
 
+#include "FrontendHandlerBase.hpp"
+#include "XenStore.hpp"
+
 using std::string;
 
-ChannelBase::ChannelBase(const std::string& name, FrontendHandlerBase& frontendHandler, XenStore& xenStore) :
-	mName(name),
-	mEventChannel(nullptr)
+RingBuffer::RingBuffer(FrontendHandlerBase& frontendHandler, const std::string& ringRefPath) :
+	mFrontendHandler(frontendHandler),
+	mDomId(frontendHandler.getDomId()),
+	mRingRefPath(ringRefPath),
+	mXenStore(frontendHandler.getXenStore())
 {
 	try
 	{
-		LOG(INFO) << "Create channel: " << name;
+		LOG(INFO) << "Create ring buffer: " << mRingRefPath << ", dom: " << mDomId;
 
 		initXen();
 	}
-	catch(const ChannelException& e)
+	catch(const RingBufferException& e)
 	{
 		releaseXen();
 
@@ -42,20 +47,19 @@ ChannelBase::ChannelBase(const std::string& name, FrontendHandlerBase& frontendH
 	}
 }
 
-void ChannelBase::initXen()
+RingBuffer::~RingBuffer()
 {
-	mEventChannel = xc_evtchn_open(nullptr, 0);
+	LOG(INFO) << "Delete ring buffer: " << mRingRefPath << ", dom: " << mDomId;
 
-	if (!mEventChannel)
-	{
-		throw ChannelException("Can't open event channel");
-	}
+	releaseXen();
 }
 
-void ChannelBase::releaseXen()
+void RingBuffer::initXen()
 {
-	if (mEventChannel)
-	{
-		xc_evtchn_close(mEventChannel);
-	}
+	mRef = mXenStore.readInt(mRingRefPath);
+}
+
+void RingBuffer::releaseXen()
+{
+
 }

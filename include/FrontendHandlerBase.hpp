@@ -23,6 +23,8 @@
 
 #include <atomic>
 #include <exception>
+#include <map>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -31,7 +33,10 @@
 extern "C"
 {
 	#include <xen/io/xenbus.h>
+	#include <xenctrl.h>
 }
+
+#include "DataChannelBase.hpp"
 
 class BackendBase;
 class XenStore;
@@ -50,30 +55,36 @@ private:
 class FrontendHandlerBase
 {
 public:
-	FrontendHandlerBase(int domId, BackendBase& backend, XenStore& xenStore);
+	FrontendHandlerBase(int domId, BackendBase& backend, XenStore& xenStore, int id = 0);
 	virtual ~FrontendHandlerBase();
 
 	void start();
 	void stop();
 
-	virtual void onBind();
+	int getDomId() const { return mDomId; }
+	const std::string& getXsFrontendPath() const { return mXsFrontendPath; }
+	XenStore& getXenStore() { return mXenStore; }
+	xc_gnttab* getXcGnttab() const;
 
-	void bindChannel(const std::string& name);
+protected:
+	virtual void onBind() = 0;
+
+	void addChannel(std::shared_ptr<DataChannelBase> channel);
 
 private:
+	int mId;
 	int mDomId;
 	BackendBase& mBackend;
 	XenStore& mXenStore;
 
-	std::string mXsDomPath;
 	std::string mXsBackendPath;
 	std::string mXsFrontendPath;
-	std::string mXsRemovePath;
+
+	std::map<std::string, std::shared_ptr<DataChannelBase>> mChannels;
 
 	std::thread mThread;
-	std::atomic_bool mTerminate;
-
 	std::mutex mMutex;
+	std::atomic_bool mTerminate;
 
 	void run();
 
@@ -81,13 +92,12 @@ private:
 	void waitForBackendInitialized();
 	void waitForFrontendInitialized();
 	void waitForFrontendConnected();
+	void monitorFrontendState();
+	void frontendStateChanged(xenbus_state state);
 
 	xenbus_state waitForState(const std::string& nodePath, const std::vector<xenbus_state>& states);
 
 	void setBackendState(xenbus_state state);
-
-	void setXsWatches();
-	void clearXsWatches();
 };
 
 

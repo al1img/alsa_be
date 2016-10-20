@@ -1,5 +1,5 @@
 /*
- *  Xen Store wrapper
+ *  Xen ring buffer
  *  Copyright (c) 2016, Oleksandr Grytsov
  *
  *   This program is free software; you can redistribute it and/or modify
@@ -18,21 +18,20 @@
  *
  */
 
-#ifndef INCLUDE_XENSTORE_HPP_
-#define INCLUDE_XENSTORE_HPP_
+#ifndef INCLUDE_RINGBUFFER_HPP_
+#define INCLUDE_RINGBUFFER_HPP_
 
 #include <exception>
+#include <functional>
 #include <string>
 
-extern "C"
-{
-	#include "xenstore.h"
-}
+class FrontendHandlerBase;
+class XenStore;
 
-class XenStoreException : public std::exception
+class RingBufferException : public std::exception
 {
 public:
-	XenStoreException(const std::string& msg) : mMsg(msg) {};
+	RingBufferException(const std::string& msg) : mMsg(msg) {};
 
 	const char* what() const throw() { return mMsg.c_str(); };
 
@@ -40,28 +39,27 @@ private:
 	std::string mMsg;
 };
 
-class XenStore
+class RingBuffer
 {
 public:
-	XenStore();
-	~XenStore();
+	virtual void onRequestReceived() = 0;
 
-	std::string getDomainPath(int domId);
-	int readInt(const std::string& path);
-	void writeInt(const std::string& path, int value);
-	void removePath(const std::string& path);
+	void setNotifyEventChannelCbk(std::function<void()> cbk) { mNotifyEventChannelCbk = cbk; }
 
-	void setWatch(const std::string& path);
-	void clearWatch(const std::string& path);
-	bool checkWatches();
+protected:
+	FrontendHandlerBase& mFrontendHandler;
+	int mDomId;
+	std::string mRingRefPath;
+	int mRef;
+	XenStore& mXenStore;
+	std::function<void()> mNotifyEventChannelCbk;
+
+	RingBuffer(FrontendHandlerBase& frontendHandler, const std::string& ringRefPath);
+	virtual ~RingBuffer();
 
 private:
-	const int cPollWatchesTimeout = 100;
-
-	xs_handle*	mXsHandle;
-
-	void initHandle();
-	void releaseHandle();
+	void initXen();
+	void releaseXen();
 };
 
-#endif /* INCLUDE_XENSTORE_HPP_ */
+#endif /* INCLUDE_RINGBUFFER_HPP_ */

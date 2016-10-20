@@ -19,6 +19,8 @@
  */
 #include "XenStore.hpp"
 
+#include <poll.h>
+
 #include <glog/logging.h>
 
 using std::string;
@@ -86,6 +88,14 @@ void XenStore::writeInt(const string& path, int value)
 	}
 }
 
+void XenStore::removePath(const std::string& path)
+{
+	if (!xs_rm(mXsHandle, XBT_NULL, path.c_str()))
+	{
+		throw XenStoreException("Can't remove path " + path);
+	}
+}
+
 void XenStore::setWatch(const string& path)
 {
 	if (!xs_watch(mXsHandle, path.c_str(), ""))
@@ -101,13 +111,34 @@ void XenStore::clearWatch(const string& path)
 
 bool XenStore::checkWatches()
 {
-	auto result = xs_check_watch(mXsHandle);
+	pollfd fds;
 
-	if (result)
+	fds.fd = xs_fileno(mXsHandle);
+	fds.events = POLLIN;
+
+	auto ret = poll(&fds, 1, cPollWatchesTimeout);
+
+	if (ret > 0)
 	{
-		free(result);
+		char** result = nullptr;
+
+		do
+		{
+			result = xs_check_watch(mXsHandle);
+
+			if (result)
+			{
+				free(result);
+			}
+		}
+		while(result);
 
 		return true;
+	}
+
+	if (ret < 0)
+	{
+		throw XenStoreException("Can't poll watches");
 	}
 
 	return false;

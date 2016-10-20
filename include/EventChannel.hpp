@@ -1,5 +1,5 @@
 /*
- *  Xen Store wrapper
+ *  Xen event channel wrapper
  *  Copyright (c) 2016, Oleksandr Grytsov
  *
  *   This program is free software; you can redistribute it and/or modify
@@ -18,21 +18,24 @@
  *
  */
 
-#ifndef INCLUDE_XENSTORE_HPP_
-#define INCLUDE_XENSTORE_HPP_
+#ifndef INCLUDE_EVENTCHANNEL_HPP_
+#define INCLUDE_EVENTCHANNEL_HPP_
 
 #include <exception>
 #include <string>
 
 extern "C"
 {
-	#include "xenstore.h"
+	#include <xenctrl.h>
 }
 
-class XenStoreException : public std::exception
+class FrontendHandlerBase;
+class XenStore;
+
+class EventChannelException : public std::exception
 {
 public:
-	XenStoreException(const std::string& msg) : mMsg(msg) {};
+	EventChannelException(const std::string& msg) : mMsg(msg) {};
 
 	const char* what() const throw() { return mMsg.c_str(); };
 
@@ -40,28 +43,28 @@ private:
 	std::string mMsg;
 };
 
-class XenStore
+class EventChannel
 {
 public:
-	XenStore();
-	~XenStore();
+	EventChannel(FrontendHandlerBase& frontendHandler, const std::string& eventChannelPath);
+	~EventChannel();
 
-	std::string getDomainPath(int domId);
-	int readInt(const std::string& path);
-	void writeInt(const std::string& path, int value);
-	void removePath(const std::string& path);
+	bool waitEvent();
 
-	void setWatch(const std::string& path);
-	void clearWatch(const std::string& path);
-	bool checkWatches();
+	void notify();
 
 private:
-	const int cPollWatchesTimeout = 100;
+	const int cPoolEventTimeout = 100;
 
-	xs_handle*	mXsHandle;
+	FrontendHandlerBase& mFrontendHandler;
+	int mDomId;
+	std::string mEventChannelPath;
+	xc_evtchn *mEventChannel;
+	int mPort;
+	XenStore& mXenStore;
 
-	void initHandle();
-	void releaseHandle();
+	void initXen();
+	void releaseXen();
 };
 
-#endif /* INCLUDE_XENSTORE_HPP_ */
+#endif /* INCLUDE_EVENTCHANNEL_HPP_ */

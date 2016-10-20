@@ -59,25 +59,28 @@ public:
 	const std::string& getXsDomPath() const { return mXsDomPath; }
 	int getId() const { return mId; }
 	int getDomId() const { return mDomId; }
+	XenStore& getXenStore() { return mXenStore; }
+	xc_gnttab* getXcGntTab() { return mXcGnttab; }
 
 protected:
 	// TODO
 	virtual int getNewFrontendId() {}
+	virtual void onNewFrontend(int domId) = 0;
+
+	void addFrontendHandler(const std::shared_ptr<FrontendHandlerBase> frontendHandler);
 
 private:
-	int			mId;
-	int			mDomId;
+	int mId;
+	int mDomId;
 	std::string mDeviceName;
-
-	xc_gnttab*	mXcGnttab;
-
 	std::string mXsDomPath;
+	XenStore mXenStore;
+	xc_gnttab* mXcGnttab;
+
+	std::map<int, std::shared_ptr<FrontendHandlerBase>> mFrontendHandlers;
+
 
 	std::atomic_bool mTerminate;
-
-	XenStore	mXenStore;
-
-	std::map<int, std::unique_ptr<FrontendHandlerBase>> mFrontendHandlers;
 
 	void initXen();
 	void releaseXen();

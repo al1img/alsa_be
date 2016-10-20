@@ -36,7 +36,9 @@ extern "C"
 using std::exception;
 using std::find;
 using std::lock_guard;
+using std::make_pair;
 using std::mutex;
+using std::shared_ptr;
 using std::stoi;
 using std::string;
 using std::stringstream;
@@ -44,7 +46,8 @@ using std::thread;
 using std::to_string;
 using std::vector;
 
-FrontendHandlerBase::FrontendHandlerBase(int domId, BackendBase& backend, XenStore& xenStore) :
+FrontendHandlerBase::FrontendHandlerBase(int domId, BackendBase& backend, XenStore& xenStore, int id) :
+	mId(id),
 	mDomId(domId),
 	mBackend(backend),
 	mXenStore(xenStore),
@@ -64,7 +67,11 @@ FrontendHandlerBase::FrontendHandlerBase(int domId, BackendBase& backend, XenSto
 
 FrontendHandlerBase::~FrontendHandlerBase()
 {
+	mChannels.clear();
+
 	stop();
+
+	mXenStore.clearWatch(mXsFrontendPath);
 
 	LOG(INFO) << "Delete frontend handler: " << mDomId;
 }
@@ -75,7 +82,7 @@ void FrontendHandlerBase::start()
 
 	LOG(INFO) << "Start frontend handler: " << mDomId;
 
-	setXsWatches();
+	mXenStore.setWatch(mXsFrontendPath);
 
 	mThread = thread(&FrontendHandlerBase::run, this);
 }
@@ -86,8 +93,6 @@ void FrontendHandlerBase::stop()
 
 	LOG(INFO) << "Stop frontend handler: " << mDomId;
 
-	clearXsWatches();
-
 	mTerminate = true;
 
 	if (mThread.joinable())
@@ -96,14 +101,16 @@ void FrontendHandlerBase::stop()
 	}
 }
 
-void FrontendHandlerBase::onBind()
+xc_gnttab* FrontendHandlerBase::getXcGnttab() const
 {
-	LOG(INFO) << "On bind frontend handler: " << mDomId;
+	return mBackend.getXcGntTab();
 }
 
-void FrontendHandlerBase::bindChannel(const string& name)
+void FrontendHandlerBase::addChannel(shared_ptr<DataChannelBase> channel)
 {
+	mChannels.insert(make_pair(channel->getName(), channel));
 
+	channel->start();
 }
 
 void FrontendHandlerBase::run()
@@ -126,24 +133,20 @@ void FrontendHandlerBase::run()
 
 		while(!mTerminate)
 		{
-
+			monitorFrontendState();
 		}
 	}
-	catch(const FrontendHandlerException& e)
+	catch(const exception& e)
 	{
 		LOG(ERROR) << e.what();
 	}
-
-	clearXsWatches();
 }
 
 void FrontendHandlerBase::initXsPathes()
 {
-	mXsDomPath = mXenStore.getDomainPath(mDomId);
-
 	stringstream ss;
 
-	ss << mXsDomPath << "/device/" << mBackend.getDeviceName() << "/" << mBackend.getId();
+	ss << mXenStore.getDomainPath(mDomId) << "/device/" << mBackend.getDeviceName() << "/" << mId;
 
 	mXsFrontendPath = ss.str();
 
@@ -161,6 +164,8 @@ void FrontendHandlerBase::initXsPathes()
 
 void FrontendHandlerBase::waitForBackendInitialized()
 {
+	mXenStore.setWatch(mXsBackendPath);
+
 	LOG(INFO) << "Wait for backend initialized: " << mDomId;
 
 	auto state = waitForState(mXsBackendPath, {XenbusStateInitialising, XenbusStateClosed,
@@ -171,6 +176,8 @@ void FrontendHandlerBase::waitForBackendInitialized()
 	{
 		LOG(ERROR) << "Fudging state to " << XenbusStateInitialising;
 	}
+
+	mXenStore.clearWatch(mXsBackendPath);
 }
 
 void FrontendHandlerBase::waitForFrontendInitialized()
@@ -189,7 +196,24 @@ void FrontendHandlerBase::waitForFrontendConnected()
 {
 	LOG(INFO) << "Wait for frontend connected: " << mDomId;
 
-	waitForState(mXsFrontendPath, {XenbusStateConnected});
+	auto state = waitForState(mXsFrontendPath, {XenbusStateConnected});
+}
+
+void FrontendHandlerBase::monitorFrontendState()
+{
+	while(!mTerminate)
+	{
+		if (mXenStore.checkWatches())
+		{
+			frontendStateChanged(static_cast<xenbus_state>(
+					mXenStore.readInt(mXsFrontendPath + "/state")));
+		}
+	}
+}
+
+void FrontendHandlerBase::frontendStateChanged(xenbus_state state)
+{
+	LOG(INFO) << "Wait for frontend state changed - dom " << mDomId << ", state " << state;
 }
 
 xenbus_state FrontendHandlerBase::waitForState(const string& nodePath, const vector<xenbus_state>& states)
@@ -203,9 +227,7 @@ xenbus_state FrontendHandlerBase::waitForState(const string& nodePath, const vec
 			return state;
 		}
 
-		while(!mTerminate && !mXenStore.checkWatches())
-		{
-		}
+		while(!mTerminate && !mXenStore.checkWatches());
 
 #if 0
 		// Can't unblock xs_read_watch on close. Above implementation used (xs_check_watch).
@@ -232,20 +254,4 @@ void FrontendHandlerBase::setBackendState(xenbus_state state)
 	auto path = mXsBackendPath + "/state";
 
 	mXenStore.writeInt(path, state);
-}
-
-void FrontendHandlerBase::setXsWatches()
-{
-	LOG(INFO) << "Set XS watches: " << mDomId;
-
-	mXenStore.setWatch(mXsBackendPath);
-	mXenStore.setWatch(mXsFrontendPath);
-}
-
-void FrontendHandlerBase::clearXsWatches()
-{
-	LOG(INFO) << "Clear XS watches: " << mDomId;
-
-	mXenStore.clearWatch(mXsBackendPath);
-	mXenStore.clearWatch(mXsFrontendPath);
 }
