@@ -24,8 +24,11 @@
 
 using std::make_pair;
 using std::unique_ptr;
+using std::pair;
 using std::shared_ptr;
+using std::stoi;
 using std::string;
+using std::vector;
 
 namespace XenBackend {
 
@@ -35,7 +38,8 @@ BackendBase::BackendBase(int domId, const string& deviceName, int id) try :
 	mDeviceName(deviceName),
 	mXcGnttab(nullptr),
 	mTerminate(false),
-	mXenStore()
+	mXenStore(),
+	mXenStat()
 {
 	LOG(INFO) << "Create backend: " << deviceName << ", " << id;
 
@@ -63,19 +67,26 @@ void BackendBase::run()
 
 	while(!mTerminate)
 	{
-		auto newFrontendId = getNewFrontendId();
+		int domId = -1, id = -1;
 
-		if (mFrontendHandlers.find(newFrontendId) == mFrontendHandlers.end())
+		if (!getNewFrontend(domId, id))
 		{
-			LOG(INFO) << "New frontend: " << newFrontendId;
+			continue;
+		}
+
+		pair<int, int> newFrontend(make_pair(domId, id));
+
+		if ((domId > 0) && (mFrontendHandlers.find(newFrontend) == mFrontendHandlers.end()))
+		{
+			LOG(INFO) << "New frontend domId: " << newFrontend.first << ", instance id: " << newFrontend.second;
 
 			try
 			{
-				onNewFrontend(newFrontendId);
+				onNewFrontend(newFrontend.first, newFrontend.second);
 			}
 			catch(const FrontendHandlerException& e)
 			{
-				mFrontendHandlers.erase(newFrontendId);
+				mFrontendHandlers.erase(newFrontend);
 
 				LOG(ERROR) << e.what();
 			}
@@ -90,11 +101,42 @@ void BackendBase::stop()
 
 void BackendBase::addFrontendHandler(const shared_ptr<FrontendHandlerBase> frontendHandler)
 {
-	auto domId = frontendHandler->getDomId();
+	pair<int, int> ids(make_pair(frontendHandler->getDomId(), frontendHandler->getId()));
 
-	mFrontendHandlers.insert(make_pair(domId, frontendHandler));
+	mFrontendHandlers.insert(make_pair(ids, frontendHandler));
 
-	mFrontendHandlers[domId]->start();
+	mFrontendHandlers[ids]->start();
+}
+
+bool BackendBase::getNewFrontend(int& domId, int& id)
+{
+	for (auto dom : mXenStat.getRunningDoms())
+	{
+		if (dom == mDomId)
+		{
+			continue;
+		}
+
+		string basePath = mXenStore.getDomainPath(dom) + "/device/" + mDeviceName;
+
+		for (string strInstance : mXenStore.readDirectory(basePath))
+		{
+			auto instance = stoi(strInstance);
+
+			if (mFrontendHandlers.find(make_pair(dom, instance)) == mFrontendHandlers.end())
+			{
+				if (mXenStore.checkIfExist(basePath + "/" + strInstance + "/state"))
+				{
+					domId = dom;
+					id = instance;
+
+					return true;
+				}
+			}
+		}
+	}
+
+	return false;
 }
 
 void BackendBase::initXen()

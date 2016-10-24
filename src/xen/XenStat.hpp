@@ -1,5 +1,5 @@
 /*
- *  Xen Store wrapper
+ *  Xen Stat wrapper
  *  Copyright (c) 2016, Oleksandr Grytsov
  *
  *   This program is free software; you can redistribute it and/or modify
@@ -18,8 +18,8 @@
  *
  */
 
-#ifndef INCLUDE_XENSTORE_HPP_
-#define INCLUDE_XENSTORE_HPP_
+#ifndef SRC_XEN_XENSTAT_HPP_
+#define SRC_XEN_XENSTAT_HPP_
 
 #include <exception>
 #include <string>
@@ -27,15 +27,15 @@
 
 extern "C"
 {
-	#include "xenstore.h"
+	#include "xenstat.h"
 }
 
 namespace XenBackend {
 
-class XenStoreException : public std::exception
+class XenStatException : public std::exception
 {
 public:
-	XenStoreException(const std::string& msg) : mMsg(msg) {};
+	XenStatException(const std::string& msg) : mMsg(msg) {};
 
 	const char* what() const throw() { return mMsg.c_str(); };
 
@@ -43,28 +43,17 @@ private:
 	std::string mMsg;
 };
 
-class XenStore
+class XenStat
 {
 public:
-	XenStore();
-	~XenStore();
+	XenStat();
+	~XenStat();
 
-	std::string getDomainPath(int domId);
-	int readInt(const std::string& path);
-	std::string readString(const std::string& path);
-	void writeInt(const std::string& path, int value);
-	void removePath(const std::string& path);
-	bool checkIfExist(const std::string& path);
-
-	void setWatch(const std::string& path);
-	void clearWatch(const std::string& path);
-	bool checkWatches();
-	const std::vector<std::string> readDirectory(const std::string& path);
+	std::vector<int> getRunningDoms();
 
 private:
-	const int cPollWatchesTimeout = 100;
-
-	xs_handle*	mXsHandle;
+	xenstat_handle* mHandle;
+	xenstat_node* mCurNode;
 
 	void initHandle();
 	void releaseHandle();
@@ -72,4 +61,4 @@ private:
 
 }
 
-#endif /* INCLUDE_XENSTORE_HPP_ */
+#endif /* SRC_XEN_XENSTAT_HPP_ */

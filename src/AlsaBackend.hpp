@@ -71,9 +71,9 @@ class AlsaBackend : public XenBackend::BackendBase
 
 private:
 
-	int getNewFrontendId();
-
-	void onNewFrontend(int domId);
+	// Uncomment for manual dom
+	// bool getNewFrontend(int& domId, int& id);
+	void onNewFrontend(int domId, int id);
 };
 
 #endif /* INCLUDE_ALSABACKEND_HPP_ */

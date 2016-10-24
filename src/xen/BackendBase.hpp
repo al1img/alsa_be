@@ -26,6 +26,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 
 extern "C"
 {
@@ -34,6 +35,7 @@ extern "C"
 
 #include "FrontendHandlerBase.hpp"
 #include "XenStore.hpp"
+#include "XenStat.hpp"
 
 namespace XenBackend {
 
@@ -65,9 +67,8 @@ public:
 	xc_gnttab* getXcGntTab() { return mXcGnttab; }
 
 protected:
-	// TODO
-	virtual int getNewFrontendId() {}
-	virtual void onNewFrontend(int domId) = 0;
+	virtual bool getNewFrontend(int& domId, int& id);
+	virtual void onNewFrontend(int domId, int id) = 0;
 
 	void addFrontendHandler(const std::shared_ptr<FrontendHandlerBase> frontendHandler);
 
@@ -77,9 +78,10 @@ private:
 	std::string mDeviceName;
 	std::string mXsDomPath;
 	XenStore mXenStore;
+	XenStat mXenStat;
 	xc_gnttab* mXcGnttab;
 
-	std::map<int, std::shared_ptr<FrontendHandlerBase>> mFrontendHandlers;
+	std::map<std::pair<int, int>, std::shared_ptr<FrontendHandlerBase>> mFrontendHandlers;
 
 
 	std::atomic_bool mTerminate;

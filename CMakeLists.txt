@@ -20,6 +20,7 @@ set(SOURCES
 	src/xen/EventChannel.cpp
 	src/xen/FrontendHandlerBase.cpp
 	src/xen/RingBuffer.cpp
+	src/xen/XenStat.cpp
 	src/xen/XenStore.cpp
 	src/AlsaBackend.cpp
 )
@@ -37,5 +38,5 @@ link_directories(${XEN_LIB_PATH})
 
 add_executable(alsa_be ${SOURCES})
 
-target_link_libraries(alsa_be xenctrl xenstore glog pthread)
+target_link_libraries(alsa_be xenctrl xenstore xenstat yajl glog pthread)
 

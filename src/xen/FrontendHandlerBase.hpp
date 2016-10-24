@@ -64,6 +64,7 @@ public:
 	void stop();
 
 	int getDomId() const { return mDomId; }
+	int getId() const { return mId; }
 	const std::string& getXsFrontendPath() const { return mXsFrontendPath; }
 	XenStore& getXenStore() { return mXenStore; }
 	xc_gnttab* getXcGnttab() const;

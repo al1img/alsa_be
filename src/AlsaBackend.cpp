@@ -142,14 +142,21 @@ void AlsaFrontendHandler::createStreamChannel(int id, StreamRingBuffer::StreamTy
 	addChannel(shared_ptr<DataChannelBase>(new DataChannelBase("stream-" + to_string(id), eventChannel, ringBuffer)));
 }
 
-int AlsaBackend::getNewFrontendId()
-{
-	return 1;
-}
+// Uncomment for manual dom
 
-void AlsaBackend::onNewFrontend(int domId)
+/*
+bool AlsaBackend::getNewFrontend(int& domId, int& id)
 {
-	addFrontendHandler(shared_ptr<FrontendHandlerBase>(new AlsaFrontendHandler(domId, *this, getXenStore())));
+	domId = 1;
+	id = 0;
+
+	return true;
+}
+*/
+
+void AlsaBackend::onNewFrontend(int domId, int id)
+{
+	addFrontendHandler(shared_ptr<FrontendHandlerBase>(new AlsaFrontendHandler(domId, *this, getXenStore(), id)));
 }
 
 void terminate(int sig, siginfo_t *info, void *ptr)

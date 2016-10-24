@@ -188,6 +188,21 @@ const vector<string> XenStore::readDirectory(const string& path)
 	return vector<string>();
 }
 
+bool XenStore::checkIfExist(const std::string& path)
+{
+	unsigned length;
+	auto pData = xs_read(mXsHandle, XBT_NULL, path.c_str(), &length);
+
+	if (!pData)
+	{
+		return false;
+	}
+
+	free(pData);
+
+	return true;
+}
+
 void XenStore::initHandle()
 {
 	LOG(INFO) << "Init xen store";
