@@ -37,9 +37,9 @@ RingBuffer::RingBuffer(FrontendHandlerBase& frontendHandler, const std::string& 
 {
 	try
 	{
-		LOG(INFO) << "Create ring buffer: " << mRefPath << ", dom: " << mDomId;
-
 		initXen();
+
+		LOG(INFO) << "Create ring buffer, ref: " << mRef << ", dom: " << mDomId;
 	}
 	catch(const RingBufferException& e)
 	{
@@ -51,7 +51,7 @@ RingBuffer::RingBuffer(FrontendHandlerBase& frontendHandler, const std::string& 
 
 RingBuffer::~RingBuffer()
 {
-	LOG(INFO) << "Delete ring buffer: " << mRefPath << ", dom: " << mDomId;
+	LOG(INFO) << "Delete ring buffer, ref: " << mRef << ", dom: " << mDomId;
 
 	releaseXen();
 }

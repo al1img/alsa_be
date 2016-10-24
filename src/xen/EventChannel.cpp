@@ -28,6 +28,7 @@
 #include "XenStore.hpp"
 
 using std::string;
+using std::to_string;
 
 namespace XenBackend {
 
@@ -36,14 +37,14 @@ EventChannel::EventChannel(FrontendHandlerBase& frontendHandler, const std::stri
 	mDomId(frontendHandler.getDomId()),
 	mPortPath(portPath),
 	mXenStore(frontendHandler.getXenStore()),
-	mEventChannel(nullptr),
+	mHandle(nullptr),
 	mPort(-1)
 {
 	try
 	{
-		LOG(INFO) << "Create event channel: " << mPortPath << ", dom: " << mDomId;
-
 		initXen();
+
+		LOG(INFO) << "Create event channel, port: " << mPort << ", dom: " << mDomId;
 	}
 	catch(const EventChannelException& e)
 	{
@@ -55,7 +56,7 @@ EventChannel::EventChannel(FrontendHandlerBase& frontendHandler, const std::stri
 
 EventChannel::~EventChannel()
 {
-	LOG(INFO) << "Delete event channel: " << mPortPath << ", dom: " << mDomId;
+	LOG(INFO) << "Delete event channel, port: " << mPort << ", dom: " << mDomId;
 
 	releaseXen();
 }
@@ -64,31 +65,33 @@ bool EventChannel::waitEvent()
 {
 	pollfd fds;
 
-	fds.fd = xc_evtchn_fd(mEventChannel);
+	fds.fd = xc_evtchn_fd(mHandle);
 	fds.events = POLLIN;
 
 	auto ret = poll(&fds, 1, cPoolEventTimeout);
 
 	if (ret > 0)
 	{
-		auto port = xc_evtchn_pending(mEventChannel);
+		auto port = xc_evtchn_pending(mHandle);
 
 		if (port < 0)
 		{
 			throw EventChannelException("Can't get pending port");
 		}
 
-		if (xc_evtchn_unmask(mEventChannel, port) < 0)
+		if (xc_evtchn_unmask(mHandle, port) < 0)
 		{
 			throw EventChannelException("Can't unmask event channel");
 		}
 
 		if (port != mPort)
 		{
-			throw EventChannelException("Error port number");
+			throw EventChannelException("Error port number: " + to_string(port) + ", expected: " + to_string(mPort));
+
+			return false;
 		}
 
-		LOG(INFO) << "Event received: " << mPortPath << ", dom: " << mDomId;
+		LOG(INFO) << "Event received, port: " << mPort << ", dom: " << mDomId;
 
 		return true;
 	}
@@ -104,9 +107,9 @@ bool EventChannel::waitEvent()
 
 void EventChannel::notify()
 {
-	LOG(INFO) << "Notify event channel: " << mPortPath << ", dom: " << mDomId;
+	LOG(INFO) << "Notify event channel, port: " << mPort << ", dom: " << mDomId;
 
-	if (xc_evtchn_notify(mEventChannel, mPort) < 0)
+	if (xc_evtchn_notify(mHandle, mPort) < 0)
 	{
 		throw EventChannelException("Can't notify event channel");
 	}
@@ -114,35 +117,37 @@ void EventChannel::notify()
 
 void EventChannel::initXen()
 {
-	mEventChannel = xc_evtchn_open(nullptr, 0);
+	mHandle = xc_evtchn_open(nullptr, 0);
 
-	if (!mEventChannel)
+	if (!mHandle)
 	{
 		throw EventChannelException("Can't open event channel");
 	}
 
-	mPort = mXenStore.readInt(mPortPath);
+	auto port = mXenStore.readInt(mPortPath);
 
-	LOG(INFO) << "Read event channel port: " << mPortPath << ", dom: " << mDomId << ", port: " << mPort;
+	LOG(INFO) << "Read event channel port: " << mPortPath << ", dom: " << mDomId << ", port: " << port;
 
-	if (xc_evtchn_bind_interdomain(mEventChannel, mDomId, mPort) == -1)
+	mPort = xc_evtchn_bind_interdomain(mHandle, mDomId, port);
+
+	if (mPort == -1)
 	{
-		mPort = -1;
-
 		throw EventChannelException("Can't bind event channel");
 	}
+
+	LOG(INFO) << "Bind event channel port: " << ", dom: " << mDomId << ", remote port: " << port << ", local port: " << mPort;
 }
 
 void EventChannel::releaseXen()
 {
 	if (mPort != -1)
 	{
-		xc_evtchn_unbind(mEventChannel, mPort);
+		xc_evtchn_unbind(mHandle, mPort);
 	}
 
-	if (mEventChannel)
+	if (mHandle)
 	{
-		xc_evtchn_close(mEventChannel);
+		xc_evtchn_close(mHandle);
 	}
 }
 

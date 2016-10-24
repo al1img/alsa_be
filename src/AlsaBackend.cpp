@@ -62,7 +62,7 @@ StreamRingBuffer::StreamRingBuffer(int id, StreamType type,
 
 void StreamRingBuffer::processRequest(const xensnd_req& req)
 {
-	LOG(INFO) << "Request received: " << req.u.data.id;
+	LOG(INFO) << "Request received, id: " << mId << ", cmd:" << static_cast<int>(req.u.data.id);
 
 	xensnd_resp rsp {};
 

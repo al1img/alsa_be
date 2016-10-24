@@ -102,7 +102,7 @@ private:
 
 			if (RING_REQUEST_PROD_OVERFLOW(&mRing, rp))
 			{
-				throw RingBufferException("Frontend provided bogus ring request");
+				throw RingBufferException("Ring buffer frontend overflow");
 			}
 
 			while (rc != rp) {

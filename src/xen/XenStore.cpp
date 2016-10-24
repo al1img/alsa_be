@@ -23,11 +23,11 @@
 
 #include <glog/logging.h>
 
-namespace XenBackend {
-
 using std::string;
 using std::to_string;
 using std::vector;
+
+namespace XenBackend {
 
 XenStore::XenStore()
 {
@@ -69,8 +69,6 @@ int XenStore::readInt(const string& path)
 	unsigned length;
 	auto pData = static_cast<char*>(xs_read(mXsHandle, XBT_NULL, path.c_str(), &length));
 
-	LOG(INFO) << "Read int: " << path;
-
 	if (!pData)
 	{
 		throw XenStoreException("Can't read int from: " + path);
@@ -87,8 +85,6 @@ string XenStore::readString(const string& path)
 {
 	unsigned length;
 	auto pData = static_cast<char*>(xs_read(mXsHandle, XBT_NULL, path.c_str(), &length));
-
-	LOG(INFO) << "Read string: " << path;
 
 	if (!pData)
 	{
@@ -172,8 +168,6 @@ const vector<string> XenStore::readDirectory(const string& path)
 {
 	unsigned int num;
 	auto items = xs_directory(mXsHandle, XBT_NULL, path.c_str(), &num);
-
-	LOG(INFO) << "Read directory: " << path;
 
 	if (items && num)
 	{

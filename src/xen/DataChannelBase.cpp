@@ -41,7 +41,8 @@ namespace XenBackend {
 DataChannelBase::DataChannelBase(const string& name, shared_ptr<EventChannel> eventChannel, shared_ptr<RingBuffer> ringBuffer) :
 	mName(name),
 	mEventChannel(eventChannel),
-	mRingBuffer(ringBuffer)
+	mRingBuffer(ringBuffer),
+	mTerminate(false)
 {
 	LOG(INFO) << "Create data channel: " << mName;
 

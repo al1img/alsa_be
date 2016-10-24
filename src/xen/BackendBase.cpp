@@ -59,6 +59,8 @@ BackendBase::~BackendBase()
 
 void BackendBase::run()
 {
+	LOG(INFO) << "Wait for frontend";
+
 	while(!mTerminate)
 	{
 		auto newFrontendId = getNewFrontendId();

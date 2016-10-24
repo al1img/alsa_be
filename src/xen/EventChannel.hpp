@@ -61,7 +61,7 @@ private:
 	FrontendHandlerBase& mFrontendHandler;
 	int mDomId;
 	std::string mPortPath;
-	xc_evtchn *mEventChannel;
+	xc_evtchn *mHandle;
 	int mPort;
 	XenStore& mXenStore;
 
