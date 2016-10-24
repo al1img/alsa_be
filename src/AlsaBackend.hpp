@@ -43,7 +43,7 @@ public:
 
 	StreamRingBuffer(int id, StreamType type,
 					 XenBackend::FrontendHandlerBase& frontendHandler,
-					 const std::string& portPath);
+					 const std::string& refPath);
 
 private:
 	int mId;

@@ -49,15 +49,15 @@ unique_ptr<AlsaBackend> alsaBackend;
 
 StreamRingBuffer::StreamRingBuffer(int id, StreamType type,
 								   FrontendHandlerBase& frontendHandler,
-								   const string& portPath) :
+								   const string& refPath) :
 	CustomRingBuffer<xen_sndif_back_ring,
 					 xen_sndif_sring,
 					 xensnd_req,
-					 xensnd_resp>(frontendHandler, portPath, 4096),
+					 xensnd_resp>(frontendHandler, refPath, 4096),
 	mId(id),
 	mType(type)
 {
-
+	LOG(INFO) << "Create stream ring buffer: id = " << id << ", type:" << static_cast<int>(type);
 }
 
 void StreamRingBuffer::processRequest(const xensnd_req& req)
@@ -130,6 +130,8 @@ void AlsaFrontendHandler::processStream(const std::string& streamPath)
 	{
 		streamType = StreamRingBuffer::StreamType::CAPTURE;
 	}
+
+	createStreamChannel(id, streamType, streamPath);
 }
 
 void AlsaFrontendHandler::createStreamChannel(int id, StreamRingBuffer::StreamType type, const string& streamPath)

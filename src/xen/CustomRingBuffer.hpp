@@ -40,8 +40,8 @@ template<typename Ring, typename SRing, typename Req, typename Rsp>
 class CustomRingBuffer : public RingBuffer
 {
 public:
-	CustomRingBuffer(FrontendHandlerBase& frontendHandler, const std::string& ringRefPath, int pageSize) :
-		RingBuffer(frontendHandler, ringRefPath),
+	CustomRingBuffer(FrontendHandlerBase& frontendHandler, const std::string& refPath, int pageSize) :
+		RingBuffer(frontendHandler, refPath),
 		mGnttab(mFrontendHandler.getXcGnttab()),
 		mPageSize(pageSize)
 	{
