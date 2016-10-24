@@ -69,6 +69,8 @@ int XenStore::readInt(const string& path)
 	unsigned length;
 	auto pData = static_cast<char*>(xs_read(mXsHandle, XBT_NULL, path.c_str(), &length));
 
+	LOG(INFO) << "Read int: " << path;
+
 	if (!pData)
 	{
 		throw XenStoreException("Can't read int from: " + path);
@@ -85,6 +87,8 @@ string XenStore::readString(const string& path)
 {
 	unsigned length;
 	auto pData = static_cast<char*>(xs_read(mXsHandle, XBT_NULL, path.c_str(), &length));
+
+	LOG(INFO) << "Read string: " << path;
 
 	if (!pData)
 	{

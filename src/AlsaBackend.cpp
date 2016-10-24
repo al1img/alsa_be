@@ -136,8 +136,8 @@ void AlsaFrontendHandler::processStream(const std::string& streamPath)
 
 void AlsaFrontendHandler::createStreamChannel(int id, StreamRingBuffer::StreamType type, const string& streamPath)
 {
-	shared_ptr<EventChannel> eventChannel(new EventChannel(*this, getXenStore().readString(streamPath + "/" + XENSND_FIELD_EVT_CHNL)));
-	shared_ptr<RingBuffer> ringBuffer(new StreamRingBuffer(id, type, *this, getXenStore().readString(streamPath + "/" + XENSND_FIELD_RING_REF)));
+	shared_ptr<EventChannel> eventChannel(new EventChannel(*this, streamPath + "/" + XENSND_FIELD_EVT_CHNL));
+	shared_ptr<RingBuffer> ringBuffer(new StreamRingBuffer(id, type, *this, streamPath + "/" + XENSND_FIELD_RING_REF));
 
 	addChannel(shared_ptr<DataChannelBase>(new DataChannelBase("stream-" + to_string(id), eventChannel, ringBuffer)));
 }
