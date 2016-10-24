@@ -24,7 +24,7 @@
 extern "C"
 {
 	#include "xenctrl.h"
-	#include "vsndif.h"
+	#include "sndif_linux.h"
 }
 
 #include "BackendBase.hpp"
@@ -32,17 +32,24 @@ extern "C"
 #include "CustomRingBuffer.hpp"
 #include "FrontendHandlerBase.hpp"
 
-class ControlChannel : public XenBackend::CustomRingBuffer<
-											xen_vsndif_ctrl_back_ring,
-											xen_vsndif_ctrl_sring,
-											xen_vsndif_ctrl_request,
-											xen_vsndif_ctrl_response>
+class StreamRingBuffer : public XenBackend::CustomRingBuffer<
+											xen_sndif_back_ring,
+											xen_sndif_sring,
+											xensnd_req,
+											xensnd_resp>
 {
 public:
-	ControlChannel(XenBackend::FrontendHandlerBase& frontendHandler);
+	enum class StreamType {PLAYBACK, CAPTURE};
+
+	StreamRingBuffer(int id, StreamType type,
+					 XenBackend::FrontendHandlerBase& frontendHandler,
+					 const std::string& portPath);
 
 private:
-	void processRequest(const xen_vsndif_ctrl_request& req);
+	int mId;
+	StreamType mType;
+
+	void processRequest(const xensnd_req& req);
 };
 
 class AlsaFrontendHandler : public XenBackend::FrontendHandlerBase
@@ -51,6 +58,11 @@ class AlsaFrontendHandler : public XenBackend::FrontendHandlerBase
 
 private:
 	void onBind();
+
+	void createStreamChannel(int id, StreamRingBuffer::StreamType type, const std::string& streamPath);
+	void processCard(const std::string& cardPath);
+	void processDevice(const std::string& devPath);
+	void processStream(const std::string& streamPath);
 };
 
 class AlsaBackend : public XenBackend::BackendBase

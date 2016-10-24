@@ -31,17 +31,17 @@ using std::string;
 
 namespace XenBackend {
 
-EventChannel::EventChannel(FrontendHandlerBase& frontendHandler, const std::string& eventChannelPath) :
+EventChannel::EventChannel(FrontendHandlerBase& frontendHandler, const std::string& portPath) :
 	mFrontendHandler(frontendHandler),
 	mDomId(frontendHandler.getDomId()),
-	mEventChannelPath(eventChannelPath),
+	mPortPath(portPath),
 	mXenStore(frontendHandler.getXenStore()),
 	mEventChannel(nullptr),
 	mPort(-1)
 {
 	try
 	{
-		LOG(INFO) << "Create event channel: " << mEventChannelPath << ", dom: " << mDomId;
+		LOG(INFO) << "Create event channel: " << mPortPath << ", dom: " << mDomId;
 
 		initXen();
 	}
@@ -55,7 +55,7 @@ EventChannel::EventChannel(FrontendHandlerBase& frontendHandler, const std::stri
 
 EventChannel::~EventChannel()
 {
-	LOG(INFO) << "Delete event channel: " << mEventChannelPath << ", dom: " << mDomId;
+	LOG(INFO) << "Delete event channel: " << mPortPath << ", dom: " << mDomId;
 
 	releaseXen();
 }
@@ -88,7 +88,7 @@ bool EventChannel::waitEvent()
 			throw EventChannelException("Error port number");
 		}
 
-		LOG(INFO) << "Event received: " << mEventChannelPath << ", dom: " << mDomId;
+		LOG(INFO) << "Event received: " << mPortPath << ", dom: " << mDomId;
 
 		return true;
 	}
@@ -104,7 +104,7 @@ bool EventChannel::waitEvent()
 
 void EventChannel::notify()
 {
-	LOG(INFO) << "Notify event channel: " << mEventChannelPath << ", dom: " << mDomId;
+	LOG(INFO) << "Notify event channel: " << mPortPath << ", dom: " << mDomId;
 
 	if (xc_evtchn_notify(mEventChannel, mPort) < 0)
 	{
@@ -121,7 +121,9 @@ void EventChannel::initXen()
 		throw EventChannelException("Can't open event channel");
 	}
 
-	mPort = mXenStore.readInt(mFrontendHandler.getXsFrontendPath() + "/" + mEventChannelPath);
+	mPort = mXenStore.readInt(mPortPath);
+
+	LOG(INFO) << "Read event channel port: " << mPortPath << ", dom: " << mDomId << ", port: " << mPort;
 
 	if (xc_evtchn_bind_interdomain(mEventChannel, mDomId, mPort) == -1)
 	{

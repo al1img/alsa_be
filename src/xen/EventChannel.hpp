@@ -48,7 +48,7 @@ private:
 class EventChannel
 {
 public:
-	EventChannel(FrontendHandlerBase& frontendHandler, const std::string& eventChannelPath);
+	EventChannel(FrontendHandlerBase& frontendHandler, const std::string& portPath);
 	~EventChannel();
 
 	bool waitEvent();
@@ -60,7 +60,7 @@ private:
 
 	FrontendHandlerBase& mFrontendHandler;
 	int mDomId;
-	std::string mEventChannelPath;
+	std::string mPortPath;
 	xc_evtchn *mEventChannel;
 	int mPort;
 	XenStore& mXenStore;

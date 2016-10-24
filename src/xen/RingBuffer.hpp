@@ -51,12 +51,12 @@ public:
 protected:
 	FrontendHandlerBase& mFrontendHandler;
 	int mDomId;
-	std::string mRingRefPath;
+	std::string mRefPath;
 	int mRef;
 	XenStore& mXenStore;
 	std::function<void()> mNotifyEventChannelCbk;
 
-	RingBuffer(FrontendHandlerBase& frontendHandler, const std::string& ringRefPath);
+	RingBuffer(FrontendHandlerBase& frontendHandler, const std::string& refPath);
 	virtual ~RingBuffer();
 
 private:

@@ -23,6 +23,7 @@
 
 #include <exception>
 #include <string>
+#include <vector>
 
 extern "C"
 {
@@ -50,12 +51,14 @@ public:
 
 	std::string getDomainPath(int domId);
 	int readInt(const std::string& path);
+	std::string readString(const std::string& path);
 	void writeInt(const std::string& path, int value);
 	void removePath(const std::string& path);
 
 	void setWatch(const std::string& path);
 	void clearWatch(const std::string& path);
 	bool checkWatches();
+	const std::vector<std::string> readDirectory(const std::string& path);
 
 private:
 	const int cPollWatchesTimeout = 100;

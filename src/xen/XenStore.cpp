@@ -27,6 +27,7 @@ namespace XenBackend {
 
 using std::string;
 using std::to_string;
+using std::vector;
 
 XenStore::XenStore()
 {
@@ -70,7 +71,7 @@ int XenStore::readInt(const string& path)
 
 	if (!pData)
 	{
-		throw XenStoreException("Can't read state from: " + path);
+		throw XenStoreException("Can't read int from: " + path);
 	}
 
 	string result(pData);
@@ -78,6 +79,23 @@ int XenStore::readInt(const string& path)
 	free(pData);
 
 	return stoi(result);
+}
+
+string XenStore::readString(const string& path)
+{
+	unsigned length;
+	auto pData = static_cast<char*>(xs_read(mXsHandle, XBT_NULL, path.c_str(), &length));
+
+	if (!pData)
+	{
+		throw XenStoreException("Can't read string from: " + path);
+	}
+
+	string result(pData);
+
+	free(pData);
+
+	return result;
 }
 
 void XenStore::writeInt(const string& path, int value)
@@ -144,6 +162,32 @@ bool XenStore::checkWatches()
 	}
 
 	return false;
+}
+
+const vector<string> XenStore::readDirectory(const string& path)
+{
+	unsigned int num;
+	auto items = xs_directory(mXsHandle, XBT_NULL, path.c_str(), &num);
+
+	LOG(INFO) << "Read directory: " << path;
+
+	if (items && num)
+	{
+		vector<string> result;
+
+		result.reserve(num);
+
+		for(auto i = 0; i < num; i++)
+		{
+			result.push_back(items[i]);
+		}
+
+		free(items);
+
+		return result;
+	}
+
+	return vector<string>();
 }
 
 void XenStore::initHandle()

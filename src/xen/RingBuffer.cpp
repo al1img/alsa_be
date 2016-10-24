@@ -29,15 +29,15 @@ using std::string;
 
 namespace XenBackend {
 
-RingBuffer::RingBuffer(FrontendHandlerBase& frontendHandler, const std::string& ringRefPath) :
+RingBuffer::RingBuffer(FrontendHandlerBase& frontendHandler, const std::string& refPath) :
 	mFrontendHandler(frontendHandler),
 	mDomId(frontendHandler.getDomId()),
-	mRingRefPath(ringRefPath),
+	mRefPath(refPath),
 	mXenStore(frontendHandler.getXenStore())
 {
 	try
 	{
-		LOG(INFO) << "Create ring buffer: " << mRingRefPath << ", dom: " << mDomId;
+		LOG(INFO) << "Create ring buffer: " << mRefPath << ", dom: " << mDomId;
 
 		initXen();
 	}
@@ -51,14 +51,16 @@ RingBuffer::RingBuffer(FrontendHandlerBase& frontendHandler, const std::string& 
 
 RingBuffer::~RingBuffer()
 {
-	LOG(INFO) << "Delete ring buffer: " << mRingRefPath << ", dom: " << mDomId;
+	LOG(INFO) << "Delete ring buffer: " << mRefPath << ", dom: " << mDomId;
 
 	releaseXen();
 }
 
 void RingBuffer::initXen()
 {
-	mRef = mXenStore.readInt(mRingRefPath);
+	mRef = mXenStore.readInt(mRefPath);
+
+	LOG(INFO) << "Read ref: " << mRefPath << ", dom: " << mDomId << ", ref: " << mRef;
 }
 
 void RingBuffer::releaseXen()

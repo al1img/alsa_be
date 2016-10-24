@@ -215,7 +215,7 @@ void FrontendHandlerBase::monitorFrontendState()
 
 void FrontendHandlerBase::frontendStateChanged(xenbus_state state)
 {
-	LOG(INFO) << "Wait for frontend state changed - dom " << mDomId << ", state " << state;
+	LOG(INFO) << "Frontend state changed - dom " << mDomId << ", state " << state;
 }
 
 xenbus_state FrontendHandlerBase::waitForState(const string& nodePath, const vector<xenbus_state>& states)
@@ -230,6 +230,11 @@ xenbus_state FrontendHandlerBase::waitForState(const string& nodePath, const vec
 		}
 
 		while(!mTerminate && !mXenStore.checkWatches());
+
+		if (mTerminate)
+		{
+			throw FrontendHandlerException("Frontend terminated: " + to_string(mDomId));
+		}
 
 #if 0
 		// Can't unblock xs_read_watch on close. Above implementation used (xs_check_watch).

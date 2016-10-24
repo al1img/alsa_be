@@ -18,48 +18,126 @@
  *
  */
 
+#include "AlsaBackend.hpp"
+
+#include <vector>
+
 #include <signal.h>
 
 #include <glog/logging.h>
 
-#include "AlsaBackend.hpp"
+//#include "AlsaPcm.hpp"
+#include "XenStore.hpp"
 
 using std::exception;
 using std::runtime_error;
 using std::shared_ptr;
+using std::string;
+using std::to_string;
+using std::vector;
 using std::unique_ptr;
 
 using XenBackend::DataChannelBase;
 using XenBackend::EventChannel;
 using XenBackend::FrontendHandlerBase;
 using XenBackend::RingBuffer;
+using XenBackend::XenStore;
+
+//using Alsa::AlsaPcm;
 
 unique_ptr<AlsaBackend> alsaBackend;
 
-ControlChannel::ControlChannel(FrontendHandlerBase& frontendHandler) :
-	CustomRingBuffer<xen_vsndif_ctrl_back_ring,
-					 xen_vsndif_ctrl_sring,
-					 xen_vsndif_ctrl_request,
-					 xen_vsndif_ctrl_response>(frontendHandler, "ring-ref", 4096)
+StreamRingBuffer::StreamRingBuffer(int id, StreamType type,
+								   FrontendHandlerBase& frontendHandler,
+								   const string& portPath) :
+	CustomRingBuffer<xen_sndif_back_ring,
+					 xen_sndif_sring,
+					 xensnd_req,
+					 xensnd_resp>(frontendHandler, portPath, 4096),
+	mId(id),
+	mType(type)
 {
 
 }
 
-void ControlChannel::processRequest(const xen_vsndif_ctrl_request& req)
+void StreamRingBuffer::processRequest(const xensnd_req& req)
 {
-	LOG(INFO) << "Request received: " << req.operation;
+	LOG(INFO) << "Request received: " << req.u.data.id;
 
-	xen_vsndif_ctrl_response rsp { .operation = req.operation, .status = 1 };
+	xensnd_resp rsp {};
+
+	rsp.u.data.id = req.u.data.id;
+	rsp.u.data.status = 1;
 
 	sendResponse(rsp);
 }
 
 void AlsaFrontendHandler::onBind()
 {
-	shared_ptr<EventChannel> eventChannel(new EventChannel(*this, "evt-chnl"));
-	shared_ptr<RingBuffer> ringBuffer(new ControlChannel(*this));
+	string cardBasePath = getXsFrontendPath() + "/" + XENSND_PATH_CARD;
 
-	addChannel(shared_ptr<DataChannelBase>(new DataChannelBase("ctrl", eventChannel, ringBuffer)));
+	const vector<string> cards = getXenStore().readDirectory(cardBasePath);
+
+	LOG(INFO) << "On frontend bind : " << getDomId();
+
+	if (cards.size() == 0)
+	{
+		LOG(WARNING) << "No sound cards found : " << getDomId();
+	}
+
+	for(auto cardId : cards)
+	{
+		LOG(INFO) << "Found card: " << cardId;
+
+		processCard(cardBasePath + "/" + cardId);
+	}
+}
+
+void AlsaFrontendHandler::processCard(const std::string& cardPath)
+{
+	string devBasePath = cardPath + "/" + XENSND_PATH_DEVICE;
+
+	const vector<string> devs = getXenStore().readDirectory(devBasePath);
+
+	for(auto devId : devs)
+	{
+		LOG(INFO) << "Found device: " << devId;
+
+		processDevice(devBasePath + "/" + devId);
+	}
+}
+
+void AlsaFrontendHandler::processDevice(const std::string& devPath)
+{
+	string streamBasePath = devPath + "/" + XENSND_PATH_STREAM;
+
+	const vector<string> streams = getXenStore().readDirectory(streamBasePath);
+
+	for(auto streamId : streams)
+	{
+		LOG(INFO) << "Found stream: " << streamId;
+
+		processStream(streamBasePath + "/" + streamId);
+	}
+}
+
+void AlsaFrontendHandler::processStream(const std::string& streamPath)
+{
+	int id = getXenStore().readInt(streamPath + "/" + XENSND_FIELD_STREAM_INDEX);
+	StreamRingBuffer::StreamType streamType = StreamRingBuffer::StreamType::PLAYBACK;
+
+	if (getXenStore().readString(streamPath + "/" + XENSND_FIELD_TYPE) == XENSND_STREAM_TYPE_CAPTURE)
+	{
+		streamType = StreamRingBuffer::StreamType::CAPTURE;
+	}
+}
+
+void AlsaFrontendHandler::createStreamChannel(int id, StreamRingBuffer::StreamType type, const string& streamPath)
+{
+	shared_ptr<EventChannel> eventChannel(new EventChannel(*this, getXenStore().readString(streamPath + "/" + XENSND_FIELD_EVT_CHNL)));
+	shared_ptr<RingBuffer> ringBuffer(new StreamRingBuffer(id, type, *this, getXenStore().readString(streamPath + "/" + XENSND_FIELD_RING_REF)));
+
+	addChannel(shared_ptr<DataChannelBase>(new DataChannelBase("stream-" + to_string(id), eventChannel, ringBuffer)));
 }
 
 int AlsaBackend::getNewFrontendId()
@@ -111,9 +189,19 @@ int main(int argc, char *argv[])
 	{
 		registerTerminate();
 
-		alsaBackend.reset(new AlsaBackend(0, "audio"));
+		alsaBackend.reset(new AlsaBackend(0, XENSND_DRIVER_NAME));
 
 		alsaBackend->run();
+
+/*
+		AlsaPcm alsa("default");
+
+		alsa.info();
+
+		alsa.open();
+
+		alsa.close();
+*/
 	}
 	catch(const exception& e)
 	{

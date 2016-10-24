@@ -27,6 +27,8 @@
 
 #include <sys/mman.h>
 
+#include <glog/logging.h>
+
 extern "C"
 {
 	#include <xenctrl.h>
