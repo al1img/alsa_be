@@ -205,7 +205,7 @@ bool XenStore::checkIfExist(const std::string& path)
 
 void XenStore::initHandle()
 {
-	LOG(INFO) << "Init xen store";
+	VLOG(2) << "Init xen store";
 
 	mXsHandle = xs_daemon_open();
 
@@ -217,7 +217,7 @@ void XenStore::initHandle()
 
 void XenStore::releaseHandle()
 {
-	LOG(INFO) << "Release xen store";
+	VLOG(2) << "Release xen store";
 
 	if (mXsHandle)
 	{

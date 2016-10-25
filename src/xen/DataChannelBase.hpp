@@ -55,7 +55,7 @@ public:
 	void start();
 	void stop();
 
-	const std::string& getName() const { return mName; }
+	const std::string& getName() const { std::lock_guard<std::mutex> lock(mMutex); return mName; }
 
 private:
 	std::string mName;
@@ -64,7 +64,7 @@ private:
 	std::shared_ptr<RingBuffer> mRingBuffer;
 
 	std::thread mThread;
-	std::mutex mMutex;
+	mutable std::mutex mMutex;
 	std::atomic_bool mTerminate;
 
 	void run();

@@ -20,6 +20,7 @@ set(SOURCES
 	src/xen/EventChannel.cpp
 	src/xen/FrontendHandlerBase.cpp
 	src/xen/RingBuffer.cpp
+	src/xen/Utils.cpp
 	src/xen/XenStat.cpp
 	src/xen/XenStore.cpp
 	src/AlsaBackend.cpp

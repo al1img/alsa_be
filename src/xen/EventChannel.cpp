@@ -44,7 +44,7 @@ EventChannel::EventChannel(FrontendHandlerBase& frontendHandler, const std::stri
 	{
 		initXen();
 
-		LOG(INFO) << "Create event channel, port: " << mPort << ", dom: " << mDomId;
+		VLOG(1) << "Create event channel, port: " << mPort << ", dom: " << mDomId;
 	}
 	catch(const EventChannelException& e)
 	{
@@ -56,7 +56,7 @@ EventChannel::EventChannel(FrontendHandlerBase& frontendHandler, const std::stri
 
 EventChannel::~EventChannel()
 {
-	LOG(INFO) << "Delete event channel, port: " << mPort << ", dom: " << mDomId;
+	VLOG(1) << "Delete event channel, port: " << mPort << ", dom: " << mDomId;
 
 	releaseXen();
 }
@@ -91,7 +91,7 @@ bool EventChannel::waitEvent()
 			return false;
 		}
 
-		LOG(INFO) << "Event received, port: " << mPort << ", dom: " << mDomId;
+		DVLOG(2) << "Event received, port: " << mPort << ", dom: " << mDomId;
 
 		return true;
 	}
@@ -107,7 +107,7 @@ bool EventChannel::waitEvent()
 
 void EventChannel::notify()
 {
-	LOG(INFO) << "Notify event channel, port: " << mPort << ", dom: " << mDomId;
+	DVLOG(2) << "Notify event channel, port: " << mPort << ", dom: " << mDomId;
 
 	if (xc_evtchn_notify(mHandle, mPort) < 0)
 	{
@@ -126,7 +126,7 @@ void EventChannel::initXen()
 
 	auto port = mXenStore.readInt(mPortPath);
 
-	LOG(INFO) << "Read event channel port: " << mPortPath << ", dom: " << mDomId << ", port: " << port;
+	VLOG(1) << "Read event channel port: " << mPortPath << ", dom: " << mDomId << ", port: " << port;
 
 	mPort = xc_evtchn_bind_interdomain(mHandle, mDomId, port);
 
@@ -135,7 +135,7 @@ void EventChannel::initXen()
 		throw EventChannelException("Can't bind event channel");
 	}
 
-	LOG(INFO) << "Bind event channel port: " << ", dom: " << mDomId << ", remote port: " << port << ", local port: " << mPort;
+	VLOG(1) << "Bind event channel port: " << ", dom: " << mDomId << ", remote port: " << port << ", local port: " << mPort;
 }
 
 void EventChannel::releaseXen()

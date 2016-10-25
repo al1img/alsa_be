@@ -27,8 +27,6 @@
 
 #include <sys/mman.h>
 
-#include <glog/logging.h>
-
 extern "C"
 {
 	#include <xenctrl.h>
@@ -102,16 +100,14 @@ private:
 
 			if (RING_REQUEST_PROD_OVERFLOW(&mRing, rp))
 			{
-				throw RingBufferException("Ring buffer frontend overflow");
+				throw RingBufferException("Ring buffer producer overflow");
 			}
 
 			while (rc != rp) {
 
 				if (RING_REQUEST_CONS_OVERFLOW(&mRing, rc))
 				{
-					LOG(ERROR) << "Ring buffer overflow";
-
-					break;
+					throw RingBufferException("Ring buffer consumer overflow");
 				}
 
 				std::memcpy(&req, RING_GET_REQUEST(&mRing, rc), sizeof(req));

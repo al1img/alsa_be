@@ -63,11 +63,12 @@ public:
 	void start();
 	void stop();
 
-	int getDomId() const { return mDomId; }
-	int getId() const { return mId; }
-	const std::string& getXsFrontendPath() const { return mXsFrontendPath; }
-	XenStore& getXenStore() { return mXenStore; }
+	int getDomId() const { std::lock_guard<std::mutex> lock(mMutex); return mDomId; }
+	int getId() const { std::lock_guard<std::mutex> lock(mMutex); return mId; }
+	const std::string& getXsFrontendPath() const { std::lock_guard<std::mutex> lock(mMutex); return mXsFrontendPath; }
+	XenStore& getXenStore() { std::lock_guard<std::mutex> lock(mMutex); return mXenStore; }
 	xc_gnttab* getXcGnttab() const;
+	bool isTerminated() const { return mTerminated; }
 
 protected:
 	virtual void onBind() = 0;
@@ -86,8 +87,11 @@ private:
 	std::map<std::string, std::shared_ptr<DataChannelBase>> mChannels;
 
 	std::thread mThread;
-	std::mutex mMutex;
+	mutable std::mutex mMutex;
 	std::atomic_bool mTerminate;
+	std::atomic_bool mTerminated;
+
+	std::string mLogId;
 
 	void run();
 

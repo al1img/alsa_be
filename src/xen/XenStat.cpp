@@ -75,12 +75,12 @@ vector<int> XenStat::getRunningDoms()
 
 XenStat::~XenStat()
 {
-
+	releaseHandle();
 }
 
 void XenStat::initHandle()
 {
-	LOG(INFO) << "Init xen stat";
+	VLOG(2) << "Init xen stat";
 
 	mHandle = xc_interface_open(0,0,0);
 
@@ -92,7 +92,7 @@ void XenStat::initHandle()
 
 void XenStat::releaseHandle()
 {
-	LOG(INFO) << "Release xen stat";
+	VLOG(2) << "Release xen stat";
 
 	if (mHandle)
 	{

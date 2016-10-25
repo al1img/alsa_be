@@ -32,6 +32,7 @@ extern "C"
 }
 
 #include "BackendBase.hpp"
+#include "Utils.hpp"
 
 using std::exception;
 using std::find;
@@ -53,11 +54,16 @@ FrontendHandlerBase::FrontendHandlerBase(int domId, BackendBase& backend, XenSto
 	mDomId(domId),
 	mBackend(backend),
 	mXenStore(xenStore),
-	mTerminate(false)
+	mTerminate(false),
+	mTerminated(false)
 {
 	try
 	{
-		LOG(INFO) << "Create frontend handler: " << mDomId;
+		mLogId = Utils::logDomId(mDomId, mId) + " - ";
+
+		VLOG(1) << mLogId << "Create frontend handler";
+
+		setBackendState(XenbusStateInitialising);
 
 		initXsPathes();
 	}
@@ -75,14 +81,16 @@ FrontendHandlerBase::~FrontendHandlerBase()
 
 	mXenStore.clearWatch(mXsFrontendPath);
 
-	LOG(INFO) << "Delete frontend handler: " << mDomId;
+	setBackendState(XenbusStateClosed);
+
+	VLOG(1) << mLogId << "Delete frontend handler";
 }
 
 void FrontendHandlerBase::start()
 {
 	lock_guard<mutex> lock(mMutex);
 
-	LOG(INFO) << "Start frontend handler: " << mDomId;
+	VLOG(1) << mLogId << "Start frontend handler";
 
 	mXenStore.setWatch(mXsFrontendPath);
 
@@ -93,7 +101,7 @@ void FrontendHandlerBase::stop()
 {
 	lock_guard<mutex> lock(mMutex);
 
-	LOG(INFO) << "Stop frontend handler: " << mDomId;
+	VLOG(1) << mLogId << "Stop frontend handler";
 
 	mTerminate = true;
 
@@ -105,21 +113,28 @@ void FrontendHandlerBase::stop()
 
 xc_gnttab* FrontendHandlerBase::getXcGnttab() const
 {
+	lock_guard<mutex> lock(mMutex);
+
 	return mBackend.getXcGntTab();
 }
 
 void FrontendHandlerBase::addChannel(shared_ptr<DataChannelBase> channel)
 {
+	lock_guard<mutex> lock(mMutex);
+
 	mChannels.insert(make_pair(channel->getName(), channel));
 
 	channel->start();
+
+	LOG(INFO) << mLogId << "Add channel: " << channel->getName();
 }
 
 void FrontendHandlerBase::run()
 {
 	try
 	{
-		waitForBackendInitialized();
+
+		//waitForBackendInitialized();
 
 		setBackendState(XenbusStateInitWait);
 
@@ -131,7 +146,7 @@ void FrontendHandlerBase::run()
 
 		waitForFrontendConnected();
 
-		LOG(INFO) << "Initialization completed: " << mDomId;
+		LOG(INFO) << mLogId << "Initialization completed";
 
 		while(!mTerminate)
 		{
@@ -142,6 +157,10 @@ void FrontendHandlerBase::run()
 	{
 		LOG(ERROR) << e.what();
 	}
+
+	setBackendState(XenbusStateClosing);
+
+	mTerminated = true;
 }
 
 void FrontendHandlerBase::initXsPathes()
@@ -160,15 +179,15 @@ void FrontendHandlerBase::initXsPathes()
 
 	mXsBackendPath = ss.str();
 
-	LOG(INFO) << "Frontend path: " << mXsFrontendPath;
-	LOG(INFO) << "Backend path:  " << mXsBackendPath;
+	VLOG(1) << "Frontend path: " << mXsFrontendPath;
+	VLOG(1) << "Backend path:  " << mXsBackendPath;
 }
 
 void FrontendHandlerBase::waitForBackendInitialized()
 {
 	mXenStore.setWatch(mXsBackendPath);
 
-	LOG(INFO) << "Wait for backend initialized: " << mDomId;
+	LOG(INFO) << mLogId << "Wait for backend initialized";
 
 	auto state = waitForState(mXsBackendPath, {XenbusStateInitialising, XenbusStateClosed,
 											   XenbusStateInitWait, XenbusStateConnected,
@@ -184,21 +203,25 @@ void FrontendHandlerBase::waitForBackendInitialized()
 
 void FrontendHandlerBase::waitForFrontendInitialized()
 {
-	LOG(INFO) << "Wait for frontend initialized: " << mDomId;
+	LOG(INFO) << mLogId << "Wait for frontend initialized";
 
 	auto state = waitForState(mXsFrontendPath, {XenbusStateInitialised, XenbusStateConnected});
 
+	LOG(INFO) << mLogId << "Frontend state changed to: " << Utils::logState(state);
+
 	if (state == XenbusStateConnected)
 	{
-		LOG(ERROR) << "Fudging state to " << XenbusStateInitialising;
+		LOG(WARNING) << mLogId << "Frontend is already connected";
 	}
 }
 
 void FrontendHandlerBase::waitForFrontendConnected()
 {
-	LOG(INFO) << "Wait for frontend connected: " << mDomId;
+	LOG(INFO) << mLogId << "Wait for frontend connected";
 
 	auto state = waitForState(mXsFrontendPath, {XenbusStateConnected});
+
+	LOG(INFO) << mLogId << "Frontend state changed to: " << Utils::logState(state);
 }
 
 void FrontendHandlerBase::monitorFrontendState()
@@ -215,12 +238,19 @@ void FrontendHandlerBase::monitorFrontendState()
 
 void FrontendHandlerBase::frontendStateChanged(xenbus_state state)
 {
-	LOG(INFO) << "Frontend state changed - dom " << mDomId << ", state " << state;
+	LOG(INFO) << mLogId << "Frontend state changed to: " << Utils::logState(state);
+
+	if (state != XenbusStateConnected)
+	{
+		mChannels.clear();
+
+		mTerminate = true;
+	}
 }
 
 xenbus_state FrontendHandlerBase::waitForState(const string& nodePath, const vector<xenbus_state>& states)
 {
-	while(!mTerminate)
+	while(true)
 	{
 		xenbus_state state = static_cast<xenbus_state>(mXenStore.readInt(nodePath + "/state"));
 
@@ -233,30 +263,16 @@ xenbus_state FrontendHandlerBase::waitForState(const string& nodePath, const vec
 
 		if (mTerminate)
 		{
-			throw FrontendHandlerException("Frontend terminated: " + to_string(mDomId));
+			throw FrontendHandlerException(mLogId + "Frontend terminated");
 		}
-
-#if 0
-		// Can't unblock xs_read_watch on close. Above implementation used (xs_check_watch).
-
-		unsigned dummy;
-
-		auto result = xs_read_watch(mBackend.getXsHandle(), &dummy);
-
-		if (!result)
-		{
-			throw FrontendHandlerException("Can't read ");
-		}
-
-		free(result);
-#endif
-
 	}
+
+	return XenbusStateUnknown;
 }
 
 void FrontendHandlerBase::setBackendState(xenbus_state state)
 {
-	LOG(INFO) << "Set backend state to: " << state;
+	LOG(INFO) << mLogId << "Set backend state to: " << Utils::logState(state);
 
 	auto path = mXsBackendPath + "/state";
 

@@ -57,16 +57,18 @@ StreamRingBuffer::StreamRingBuffer(int id, StreamType type,
 	mId(id),
 	mType(type)
 {
-	LOG(INFO) << "Create stream ring buffer: id = " << id << ", type:" << static_cast<int>(type);
+	VLOG(1) << "Create stream ring buffer: id = " << id << ", type:" << static_cast<int>(type);
 }
 
 void StreamRingBuffer::processRequest(const xensnd_req& req)
 {
-	LOG(INFO) << "Request received, id: " << mId << ", cmd:" << static_cast<int>(req.u.data.id);
+	DVLOG(2) << "Request received, id: " << mId << ", cmd:" << static_cast<int>(req.u.data.operation);
 
 	xensnd_resp rsp {};
 
 	rsp.u.data.id = req.u.data.id;
+	rsp.u.data.stream_idx = req.u.data.stream_idx;
+	rsp.u.data.operation = req.u.data.operation;
 	rsp.u.data.status = XENSND_RSP_OKAY;
 
 	sendResponse(rsp);
@@ -78,7 +80,7 @@ void AlsaFrontendHandler::onBind()
 
 	const vector<string> cards = getXenStore().readDirectory(cardBasePath);
 
-	LOG(INFO) << "On frontend bind : " << getDomId();
+	VLOG(1) << "On frontend bind : " << getDomId();
 
 	if (cards.size() == 0)
 	{
@@ -87,7 +89,7 @@ void AlsaFrontendHandler::onBind()
 
 	for(auto cardId : cards)
 	{
-		LOG(INFO) << "Found card: " << cardId;
+		VLOG(1) << "Found card: " << cardId;
 
 		processCard(cardBasePath + "/" + cardId);
 	}
@@ -101,7 +103,7 @@ void AlsaFrontendHandler::processCard(const std::string& cardPath)
 
 	for(auto devId : devs)
 	{
-		LOG(INFO) << "Found device: " << devId;
+		VLOG(1) << "Found device: " << devId;
 
 		processDevice(devBasePath + "/" + devId);
 	}
@@ -115,7 +117,7 @@ void AlsaFrontendHandler::processDevice(const std::string& devPath)
 
 	for(auto streamId : streams)
 	{
-		LOG(INFO) << "Found stream: " << streamId;
+		VLOG(1) << "Found stream: " << streamId;
 
 		processStream(streamBasePath + "/" + streamId);
 	}
@@ -139,7 +141,7 @@ void AlsaFrontendHandler::createStreamChannel(int id, StreamRingBuffer::StreamTy
 	shared_ptr<EventChannel> eventChannel(new EventChannel(*this, streamPath + "/" + XENSND_FIELD_EVT_CHNL));
 	shared_ptr<RingBuffer> ringBuffer(new StreamRingBuffer(id, type, *this, streamPath + "/" + XENSND_FIELD_RING_REF));
 
-	addChannel(shared_ptr<DataChannelBase>(new DataChannelBase("stream-" + to_string(id), eventChannel, ringBuffer)));
+	addChannel(shared_ptr<DataChannelBase>(new DataChannelBase("stream " + to_string(id), eventChannel, ringBuffer)));
 }
 
 // Uncomment for manual dom

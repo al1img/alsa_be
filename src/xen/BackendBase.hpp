@@ -25,6 +25,7 @@
 #include <exception>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <utility>
 
@@ -59,12 +60,12 @@ public:
 	void run();
 	void stop();
 
-	const std::string& getDeviceName() const { return mDeviceName; }
-	const std::string& getXsDomPath() const { return mXsDomPath; }
-	int getId() const { return mId; }
-	int getDomId() const { return mDomId; }
-	XenStore& getXenStore() { return mXenStore; }
-	xc_gnttab* getXcGntTab() { return mXcGnttab; }
+	const std::string& getDeviceName() const { std::lock_guard<std::mutex> lock(mMutex); return mDeviceName; }
+	const std::string& getXsDomPath() const { std::lock_guard<std::mutex> lock(mMutex); return mXsDomPath; }
+	int getId() const { std::lock_guard<std::mutex> lock(mMutex); return mId; }
+	int getDomId() const { std::lock_guard<std::mutex> lock(mMutex); return mDomId; }
+	XenStore& getXenStore() { std::lock_guard<std::mutex> lock(mMutex); return mXenStore; }
+	xc_gnttab* getXcGntTab() { std::lock_guard<std::mutex> lock(mMutex); return mXcGnttab; }
 
 protected:
 	virtual bool getNewFrontend(int& domId, int& id);
@@ -81,6 +82,8 @@ private:
 	XenStat mXenStat;
 	xc_gnttab* mXcGnttab;
 
+	mutable std::mutex mMutex;
+
 	std::map<std::pair<int, int>, std::shared_ptr<FrontendHandlerBase>> mFrontendHandlers;
 
 
@@ -88,6 +91,8 @@ private:
 
 	void initXen();
 	void releaseXen();
+	void createFrontendHandler(const std::pair<int, int>& ids);
+	void checkTerminatedFrontends();
 };
 
 }

@@ -1,5 +1,5 @@
 /*
- *  Xen ring buffer
+ *  Backend utils
  *  Copyright (c) 2016, Oleksandr Grytsov
  *
  *   This program is free software; you can redistribute it and/or modify
@@ -18,55 +18,37 @@
  *
  */
 
-#include "RingBuffer.hpp"
+#include "Utils.hpp"
 
-#include <glog/logging.h>
-
-#include "FrontendHandlerBase.hpp"
-#include "XenStore.hpp"
+#include <vector>
 
 using std::string;
+using std::to_string;
+using std::vector;
 
 namespace XenBackend {
 
-RingBuffer::RingBuffer(FrontendHandlerBase& frontendHandler, const std::string& refPath) :
-	mFrontendHandler(frontendHandler),
-	mDomId(frontendHandler.getDomId()),
-	mRefPath(refPath),
-	mXenStore(frontendHandler.getXenStore())
+string Utils::logDomId(int domId, int id)
 {
-	try
+	return string("Dom(" + to_string(domId) + "/" + to_string(id) + ")");
+}
+
+string Utils::logState(xenbus_state state)
+{
+	static const vector<string> strStates = {"Unknown", "Initializing",
+											 "InitWait", "Initialized",
+											 "Connected",
+											 "Closing", "Closed",
+											 "Reconfiguring", "Reconfigured"};
+
+	if (state >= strStates.size() || state < 0)
 	{
-		initXen();
-
-		VLOG(1) << "Create ring buffer, ref: " << mRef << ", dom: " << mDomId;
+		return "Error!!!";
 	}
-	catch(const RingBufferException& e)
+	else
 	{
-		releaseXen();
-
-		throw;
+		return "[" + strStates[state] + "]";
 	}
 }
 
-RingBuffer::~RingBuffer()
-{
-	VLOG(1) << "Delete ring buffer, ref: " << mRef << ", dom: " << mDomId;
-
-	releaseXen();
 }
-
-void RingBuffer::initXen()
-{
-	mRef = mXenStore.readInt(mRefPath);
-
-	VLOG(1) << "Read ref: " << mRefPath << ", dom: " << mDomId << ", ref: " << mRef;
-}
-
-void RingBuffer::releaseXen()
-{
-
-}
-
-}
-

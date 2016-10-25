@@ -22,6 +22,8 @@
 
 #include <glog/logging.h>
 
+#include "Utils.hpp"
+
 using std::make_pair;
 using std::unique_ptr;
 using std::pair;
@@ -41,7 +43,7 @@ BackendBase::BackendBase(int domId, const string& deviceName, int id) try :
 	mXenStore(),
 	mXenStat()
 {
-	LOG(INFO) << "Create backend: " << deviceName << ", " << id;
+	VLOG(1) << "Create backend: " << deviceName << ", " << id;
 
 	initXen();
 }
@@ -58,7 +60,7 @@ BackendBase::~BackendBase()
 
 	releaseXen();
 
-	LOG(INFO) << "Delete backend: " << mDeviceName << ", " << mId;
+	VLOG(1) << "Delete backend: " << mDeviceName << ", " << mId;
 }
 
 void BackendBase::run()
@@ -69,28 +71,12 @@ void BackendBase::run()
 	{
 		int domId = -1, id = -1;
 
-		if (!getNewFrontend(domId, id))
+		if (getNewFrontend(domId, id))
 		{
-			continue;
+			createFrontendHandler(make_pair(domId, id));
 		}
 
-		pair<int, int> newFrontend(make_pair(domId, id));
-
-		if ((domId > 0) && (mFrontendHandlers.find(newFrontend) == mFrontendHandlers.end()))
-		{
-			LOG(INFO) << "New frontend domId: " << newFrontend.first << ", instance id: " << newFrontend.second;
-
-			try
-			{
-				onNewFrontend(newFrontend.first, newFrontend.second);
-			}
-			catch(const FrontendHandlerException& e)
-			{
-				mFrontendHandlers.erase(newFrontend);
-
-				LOG(ERROR) << e.what();
-			}
-		}
+		checkTerminatedFrontends();
 	}
 }
 
@@ -125,7 +111,9 @@ bool BackendBase::getNewFrontend(int& domId, int& id)
 
 			if (mFrontendHandlers.find(make_pair(dom, instance)) == mFrontendHandlers.end())
 			{
-				if (mXenStore.checkIfExist(basePath + "/" + strInstance + "/state"))
+				string statePath = basePath + "/" + strInstance + "/state";
+
+				if (mXenStore.checkIfExist(statePath))
 				{
 					domId = dom;
 					id = instance;
@@ -156,6 +144,42 @@ void BackendBase::releaseXen()
 	if (mXcGnttab)
 	{
 		xc_gnttab_close(mXcGnttab);
+	}
+}
+
+void BackendBase::createFrontendHandler(const std::pair<int, int>& ids)
+{
+	if ((ids.first > 0) && (mFrontendHandlers.find(ids) == mFrontendHandlers.end()))
+	{
+		LOG(INFO) << "Create new frontend: " << Utils::logDomId(ids.first, ids.second);
+
+		try
+		{
+			onNewFrontend(ids.first, ids.second);
+		}
+		catch(const FrontendHandlerException& e)
+		{
+			mFrontendHandlers.erase(ids);
+
+			LOG(ERROR) << e.what();
+		}
+	}
+}
+
+void BackendBase::checkTerminatedFrontends()
+{
+	for (auto it = mFrontendHandlers.begin(); it != mFrontendHandlers.end();)
+	{
+		if (it->second->isTerminated())
+		{
+			it = mFrontendHandlers.erase(it);
+
+			LOG(INFO) << "Delete terminated frontend: " << Utils::logDomId(it->first.first, it->first.second);
+		}
+		else
+		{
+			++it;
+		}
 	}
 }
 

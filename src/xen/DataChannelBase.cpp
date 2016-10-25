@@ -44,7 +44,7 @@ DataChannelBase::DataChannelBase(const string& name, shared_ptr<EventChannel> ev
 	mRingBuffer(ringBuffer),
 	mTerminate(false)
 {
-	LOG(INFO) << "Create data channel: " << mName;
+	VLOG(1) << "Create data channel: " << mName;
 
 	mRingBuffer->setNotifyEventChannelCbk([this] () { mEventChannel->notify(); });
 }
@@ -53,14 +53,14 @@ DataChannelBase::~DataChannelBase()
 {
 	stop();
 
-	LOG(INFO) << "Delete data channel: " << mName;
+	VLOG(1) << "Delete data channel: " << mName;
 }
 
 void DataChannelBase::start()
 {
 	lock_guard<mutex> lock(mMutex);
 
-	LOG(INFO) << "Start data channel: " << mName;
+	VLOG(1) << "Start data channel: " << mName;
 
 	mThread = thread(&DataChannelBase::run, this);
 }
@@ -69,7 +69,7 @@ void DataChannelBase::stop()
 {
 	lock_guard<mutex> lock(mMutex);
 
-	LOG(INFO) << "Stop data channel: " << mName;
+	VLOG(1) << "Stop data channel: " << mName;
 
 	mTerminate = true;
 
