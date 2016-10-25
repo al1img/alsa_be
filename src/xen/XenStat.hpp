@@ -27,7 +27,7 @@
 
 extern "C"
 {
-	#include "xenstat.h"
+	#include <xenctrl.h>
 }
 
 namespace XenBackend {
@@ -52,8 +52,9 @@ public:
 	std::vector<int> getRunningDoms();
 
 private:
-	xenstat_handle* mHandle;
-	xenstat_node* mCurNode;
+	const int cDomInfoChunkSize = 256;
+
+	xc_interface* mHandle;
 
 	void initHandle();
 	void releaseHandle();

@@ -38,5 +38,5 @@ link_directories(${XEN_LIB_PATH})
 
 add_executable(alsa_be ${SOURCES})
 
-target_link_libraries(alsa_be xenctrl xenstore xenstat yajl glog pthread)
+target_link_libraries(alsa_be xenctrl xenstore glog pthread)
 

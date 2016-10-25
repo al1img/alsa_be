@@ -67,7 +67,7 @@ void StreamRingBuffer::processRequest(const xensnd_req& req)
 	xensnd_resp rsp {};
 
 	rsp.u.data.id = req.u.data.id;
-	rsp.u.data.status = 1;
+	rsp.u.data.status = XENSND_RSP_OKAY;
 
 	sendResponse(rsp);
 }

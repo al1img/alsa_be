@@ -27,8 +27,7 @@ using std::vector;
 namespace XenBackend {
 
 XenStat::XenStat() :
-	mHandle(nullptr),
-	mCurNode(nullptr)
+	mHandle(nullptr)
 {
 	try
 	{
@@ -44,19 +43,34 @@ XenStat::XenStat() :
 
 vector<int> XenStat::getRunningDoms()
 {
-	vector<int> result;
+	xc_domaininfo_t domainInfo[cDomInfoChunkSize];
 
-	for(auto i=0; i < xenstat_node_num_domains(mCurNode); i++)
+	vector<int> runningDomains;
+
+	auto newDomains = 0, numDomains = 0;
+
+	do
 	{
-		auto domain = xenstat_node_domain_by_index(mCurNode,i);
+		newDomains = xc_domain_getinfolist(mHandle, numDomains, cDomInfoChunkSize, domainInfo);
 
-		if (xenstat_domain_running(domain))
+		if (newDomains < 0)
 		{
-			result.push_back(xenstat_domain_id(domain));
+			throw XenStatException("Can't get domain info");
+		}
+
+		numDomains += newDomains;
+
+		for(auto i = 0; i < numDomains; i++)
+		{
+			if (domainInfo[i].flags & XEN_DOMINF_running)
+			{
+				runningDomains.push_back(domainInfo[i].domain);
+			}
 		}
 	}
+	while(newDomains == cDomInfoChunkSize);
 
-	return result;
+	return runningDomains;
 }
 
 XenStat::~XenStat()
@@ -68,18 +82,11 @@ void XenStat::initHandle()
 {
 	LOG(INFO) << "Init xen stat";
 
-	mHandle = xenstat_init();
+	mHandle = xc_interface_open(0,0,0);
 
-	if (mHandle == nullptr)
+	if (!mHandle)
 	{
-		throw XenStatException("Failed to initialize xenstat library");
-	}
-
-	mCurNode = xenstat_get_node(mHandle, XENSTAT_ALL);
-
-	if (mCurNode == nullptr)
-	{
-		throw XenStatException("Failed to retrieve statistics from libxenstat");
+		throw XenStatException("Can't open xc interface");
 	}
 }
 
@@ -87,14 +94,9 @@ void XenStat::releaseHandle()
 {
 	LOG(INFO) << "Release xen stat";
 
-	if (mCurNode)
-	{
-		xenstat_free_node(mCurNode);
-	}
-
 	if (mHandle)
 	{
-		xenstat_uninit(mHandle);
+		xc_interface_close(mHandle);
 	}
 }
 
