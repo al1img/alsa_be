@@ -62,7 +62,7 @@ public:
 	const std::vector<std::string> readDirectory(const std::string& path);
 
 private:
-	const int cPollWatchesTimeout = 100;
+	const int cPollWatchesTimeoutMs = 100;
 
 	xs_handle*	mXsHandle;
 

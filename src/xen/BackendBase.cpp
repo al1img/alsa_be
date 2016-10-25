@@ -20,16 +20,21 @@
 
 #include "BackendBase.hpp"
 
+#include <chrono>
+#include <thread>
+
 #include <glog/logging.h>
 
 #include "Utils.hpp"
 
+using std::chrono::milliseconds;
 using std::make_pair;
 using std::unique_ptr;
 using std::pair;
 using std::shared_ptr;
 using std::stoi;
 using std::string;
+using std::this_thread::sleep_for;
 using std::vector;
 
 namespace XenBackend {
@@ -77,6 +82,8 @@ void BackendBase::run()
 		}
 
 		checkTerminatedFrontends();
+
+		sleep_for(milliseconds(cPollFrontendIntervalMs));
 	}
 }
 

@@ -74,6 +74,8 @@ protected:
 	void addFrontendHandler(const std::shared_ptr<FrontendHandlerBase> frontendHandler);
 
 private:
+	int cPollFrontendIntervalMs = 100;
+
 	int mId;
 	int mDomId;
 	std::string mDeviceName;

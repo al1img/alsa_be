@@ -56,7 +56,7 @@ public:
 	void notify();
 
 private:
-	const int cPoolEventTimeout = 100;
+	const int cPoolEventTimeoutMs = 100;
 
 	FrontendHandlerBase& mFrontendHandler;
 	int mDomId;

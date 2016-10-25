@@ -68,7 +68,7 @@ bool EventChannel::waitEvent()
 	fds.fd = xc_evtchn_fd(mHandle);
 	fds.events = POLLIN;
 
-	auto ret = poll(&fds, 1, cPoolEventTimeout);
+	auto ret = poll(&fds, 1, cPoolEventTimeoutMs);
 
 	if (ret > 0)
 	{

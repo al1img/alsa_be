@@ -136,7 +136,7 @@ bool XenStore::checkWatches()
 	fds.fd = xs_fileno(mXsHandle);
 	fds.events = POLLIN;
 
-	auto ret = poll(&fds, 1, cPollWatchesTimeout);
+	auto ret = poll(&fds, 1, cPollWatchesTimeoutMs);
 
 	if (ret > 0)
 	{
