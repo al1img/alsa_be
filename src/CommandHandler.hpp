@@ -21,22 +21,44 @@
 #ifndef SRC_COMMANDHANDLER_HPP_
 #define SRC_COMMANDHANDLER_HPP_
 
+#include <vector>
+
 #include <cstdint>
 
 #include "AlsaPcm.hpp"
 
 extern "C"
 {
+	#include "xenctrl.h"
 	#include "sndif_linux.h"
 }
 
 class CommandHandler
 {
 public:
+	CommandHandler(int domId, xc_gnttab* gnttab);
+	~CommandHandler();
+
 	uint8_t processCommand(const xensnd_req& req);
 
 private:
+	int mDomId;
+	xc_gnttab* mGnttab;
+	void* mBuffer;
+
 	Alsa::AlsaPcm mAlsaPcm;
+
+	typedef void(CommandHandler::*CommandFn)(const xensnd_req& req);
+
+	std::vector<CommandFn> mCmdTable;
+
+	void open(const xensnd_req& req);
+	void close(const xensnd_req& req);
+	void read(const xensnd_req& req);
+	void write(const xensnd_req& req);
+
+	void mapRefs(const grant_ref_t* refs);
+	void unmapRefs();
 };
 
 #endif /* SRC_COMMANDHANDLER_HPP_ */

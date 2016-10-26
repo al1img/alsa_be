@@ -27,7 +27,6 @@
 
 #include <glog/logging.h>
 
-//#include "AlsaPcm.hpp"
 #include "XenStore.hpp"
 
 using std::exception;
@@ -54,7 +53,8 @@ StreamRingBuffer::StreamRingBuffer(int id, StreamType type,
 					 xensnd_req,
 					 xensnd_resp>(frontendHandler, refPath, 4096),
 	mId(id),
-	mType(type)
+	mType(type),
+	mCommandHandler(frontendHandler.getDomId(), frontendHandler.getXcGnttab())
 {
 	VLOG(1) << "Create stream ring buffer: id = " << id << ", type:" << static_cast<int>(type);
 }
@@ -202,16 +202,6 @@ int main(int argc, char *argv[])
 		alsaBackend.reset(new AlsaBackend(0, XENSND_DRIVER_NAME));
 
 		alsaBackend->run();
-
-/*
-		AlsaPcm alsa("default");
-
-		alsa.info();
-
-		alsa.open();
-
-		alsa.close();
-*/
 	}
 	catch(const exception& e)
 	{

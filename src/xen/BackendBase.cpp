@@ -39,31 +39,21 @@ using std::vector;
 
 namespace XenBackend {
 
-BackendBase::BackendBase(int domId, const string& deviceName, int id) try :
+BackendBase::BackendBase(int domId, const string& deviceName, int id) :
 	mId(id),
 	mDomId(domId),
 	mDeviceName(deviceName),
-	mXcGnttab(nullptr),
 	mTerminate(false),
 	mXenStore(),
 	mXenStat()
 {
 	VLOG(1) << "Create backend: " << deviceName << ", " << id;
 
-	initXen();
-}
-catch(const BackendException& e)
-{
-	releaseXen();
-
-	throw;
 }
 
 BackendBase::~BackendBase()
 {
 	mFrontendHandlers.clear();
-
-	releaseXen();
 
 	VLOG(1) << "Delete backend: " << mDeviceName << ", " << mId;
 }
@@ -132,26 +122,6 @@ bool BackendBase::getNewFrontend(int& domId, int& id)
 	}
 
 	return false;
-}
-
-void BackendBase::initXen()
-{
-	mXcGnttab = xc_gnttab_open(nullptr, 0);
-
-	if (!mXcGnttab)
-	{
-		throw BackendException("Can't open xc grant table");
-	}
-
-	mXsDomPath = mXenStore.getDomainPath(mDomId);
-}
-
-void BackendBase::releaseXen()
-{
-	if (mXcGnttab)
-	{
-		xc_gnttab_close(mXcGnttab);
-	}
 }
 
 void BackendBase::createFrontendHandler(const std::pair<int, int>& ids)

@@ -68,7 +68,7 @@ public:
 	int getId() const { std::lock_guard<std::mutex> lock(mMutex); return mId; }
 	const std::string& getXsFrontendPath() const { std::lock_guard<std::mutex> lock(mMutex); return mXsFrontendPath; }
 	XenStore& getXenStore() { std::lock_guard<std::mutex> lock(mMutex); return mXenStore; }
-	xc_gnttab* getXcGnttab() const;
+	xc_gnttab* getXcGnttab() const { std::lock_guard<std::mutex> lock(mMutex); return mXcGnttab; };
 	bool isTerminated() const { return mTerminated; }
 
 protected:
@@ -80,6 +80,8 @@ private:
 	int mId;
 	int mDomId;
 	BackendBase& mBackend;
+	xc_gnttab* mXcGnttab;
+
 	XenStore mXenStore;
 
 	std::string mXsBackendPath;
@@ -96,7 +98,9 @@ private:
 
 	void run();
 
-	void initXsPathes();
+	void initXen();
+	void releaseXen();
+	void initXenStorePathes();
 	void waitForBackendInitialized();
 	void waitForFrontendInitialized();
 	void waitForFrontendConnected();

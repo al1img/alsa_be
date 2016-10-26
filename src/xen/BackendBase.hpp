@@ -29,11 +29,6 @@
 #include <string>
 #include <utility>
 
-extern "C"
-{
-	#include "xenctrl.h"
-}
-
 #include "FrontendHandlerBase.hpp"
 #include "XenStore.hpp"
 #include "XenStat.hpp"
@@ -61,10 +56,8 @@ public:
 	void stop();
 
 	const std::string& getDeviceName() const { std::lock_guard<std::mutex> lock(mMutex); return mDeviceName; }
-	const std::string& getXsDomPath() const { std::lock_guard<std::mutex> lock(mMutex); return mXsDomPath; }
 	int getId() const { std::lock_guard<std::mutex> lock(mMutex); return mId; }
 	int getDomId() const { std::lock_guard<std::mutex> lock(mMutex); return mDomId; }
-	xc_gnttab* getXcGntTab() { std::lock_guard<std::mutex> lock(mMutex); return mXcGnttab; }
 
 protected:
 	virtual bool getNewFrontend(int& domId, int& id);
@@ -78,10 +71,8 @@ private:
 	int mId;
 	int mDomId;
 	std::string mDeviceName;
-	std::string mXsDomPath;
 	XenStore mXenStore;
 	XenStat mXenStat;
-	xc_gnttab* mXcGnttab;
 
 	mutable std::mutex mMutex;
 
@@ -90,8 +81,6 @@ private:
 
 	std::atomic_bool mTerminate;
 
-	void initXen();
-	void releaseXen();
 	void createFrontendHandler(const std::pair<int, int>& ids);
 	void checkTerminatedFrontends();
 };

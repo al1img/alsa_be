@@ -53,6 +53,7 @@ FrontendHandlerBase::FrontendHandlerBase(int domId, BackendBase& backend, int id
 	mId(id),
 	mDomId(domId),
 	mBackend(backend),
+	mXcGnttab(nullptr),
 	mTerminate(false),
 	mTerminated(false)
 {
@@ -62,12 +63,14 @@ FrontendHandlerBase::FrontendHandlerBase(int domId, BackendBase& backend, int id
 
 		VLOG(1) << mLogId << "Create frontend handler";
 
-		setBackendState(XenbusStateInitialising);
+		initXen();
 
-		initXsPathes();
+		setBackendState(XenbusStateInitialising);
 	}
 	catch(const FrontendHandlerException& e)
 	{
+		releaseXen();
+
 		throw;
 	}
 }
@@ -81,6 +84,8 @@ FrontendHandlerBase::~FrontendHandlerBase()
 	mXenStore.clearWatch(mXsFrontendPath);
 
 	setBackendState(XenbusStateClosed);
+
+	releaseXen();
 
 	VLOG(1) << mLogId << "Delete frontend handler";
 }
@@ -108,13 +113,6 @@ void FrontendHandlerBase::stop()
 	{
 		mThread.join();
 	}
-}
-
-xc_gnttab* FrontendHandlerBase::getXcGnttab() const
-{
-	lock_guard<mutex> lock(mMutex);
-
-	return mBackend.getXcGntTab();
 }
 
 void FrontendHandlerBase::addChannel(shared_ptr<DataChannelBase> channel)
@@ -162,7 +160,27 @@ void FrontendHandlerBase::run()
 	mTerminated = true;
 }
 
-void FrontendHandlerBase::initXsPathes()
+void FrontendHandlerBase::initXen()
+{
+	mXcGnttab = xc_gnttab_open(nullptr, 0);
+
+	if (!mXcGnttab)
+	{
+		throw FrontendHandlerException("Can't open xc grant table");
+	}
+
+	initXenStorePathes();
+}
+
+void FrontendHandlerBase::releaseXen()
+{
+	if (mXcGnttab)
+	{
+		xc_gnttab_close(mXcGnttab);
+	}
+}
+
+void FrontendHandlerBase::initXenStorePathes()
 {
 	stringstream ss;
 
@@ -173,7 +191,7 @@ void FrontendHandlerBase::initXsPathes()
 	ss.str("");
 	ss.clear();
 
-	ss << mBackend.getXsDomPath() << "/backend/" << mBackend.getDeviceName() << "/" <<
+	ss << mXenStore.getDomainPath(mBackend.getId()) << "/backend/" << mBackend.getDeviceName() << "/" <<
 			mDomId << "/" << mBackend.getId();
 
 	mXsBackendPath = ss.str();

@@ -20,10 +20,25 @@
 
 #include "CommandHandler.hpp"
 
+#include <sys/mman.h>
+
 #include <glog/logging.h>
 
 using Alsa::AlsaPcmException;
 using Alsa::AlsaPcmParams;
+
+CommandHandler::CommandHandler(int domId, xc_gnttab* gnttab) :
+	mDomId(domId),
+	mGnttab(gnttab),
+	mBuffer(nullptr),
+	mCmdTable{&CommandHandler::open, &CommandHandler::close, &CommandHandler::read, &CommandHandler::write}
+{
+}
+
+CommandHandler::~CommandHandler()
+{
+
+}
 
 uint8_t CommandHandler::processCommand(const xensnd_req& req)
 {
@@ -31,44 +46,13 @@ uint8_t CommandHandler::processCommand(const xensnd_req& req)
 
 	try
 	{
-		switch(req.u.data.operation)
+		if (req.u.data.operation < mCmdTable.size())
 		{
-		case XENSND_OP_OPEN:
-		{
-			const xensnd_open_req& openReq = req.u.data.op.open;
-
-			mAlsaPcm.open(AlsaPcmParams(openReq.format, openReq.rate, openReq.channels));
-
-			break;
+			(this->*mCmdTable[req.u.data.operation])(req);
 		}
-
-		case XENSND_OP_CLOSE:
-
-			mAlsaPcm.close();
-
-			break;
-
-		case XENSND_OP_READ:
-
-			break;
-
-		case XENSND_OP_WRITE:
-
-			break;
-
-		case XENSND_OP_SET_VOLUME:
-
-			break;
-
-		case XENSND_OP_GET_VOLUME:
-
-			break;
-
-		default:
-
+		else
+		{
 			status = XENSND_RSP_ERROR;
-
-			break;
 		}
 	}
 	catch(const AlsaPcmException& e)
@@ -79,4 +63,46 @@ uint8_t CommandHandler::processCommand(const xensnd_req& req)
 	}
 
 	return status;
+}
+
+void CommandHandler::open(const xensnd_req& req)
+{
+	DVLOG(2) << "Handle Open command";
+
+	const xensnd_open_req& openReq = req.u.data.op.open;
+
+	if (mBuffer)
+	{
+		mAlsaPcm.open(AlsaPcmParams(openReq.format, openReq.rate, openReq.channels));
+	}
+
+}
+
+void CommandHandler::close(const xensnd_req& req)
+{
+	DVLOG(2) << "Handle Close command";
+}
+
+void CommandHandler::read(const xensnd_req& req)
+{
+	DVLOG(2) << "Handle Read command";
+}
+
+void CommandHandler::write(const xensnd_req& req)
+{
+	DVLOG(2) << "Handle Write command";
+}
+
+// TODO: create class to handle refs
+
+void CommandHandler::mapRefs(const grant_ref_t* refs)
+{
+	mBuffer = xc_gnttab_map_domain_grant_refs(mGnttab, XENSND_MAX_PAGES_PER_REQUEST,
+											  mDomId, const_cast<uint32_t*>(refs),
+											  PROT_READ | PROT_WRITE);
+}
+
+void CommandHandler::unmapRefs()
+{
+
 }
