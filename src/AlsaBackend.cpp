@@ -157,7 +157,7 @@ bool AlsaBackend::getNewFrontend(int& domId, int& id)
 
 void AlsaBackend::onNewFrontend(int domId, int id)
 {
-	addFrontendHandler(shared_ptr<FrontendHandlerBase>(new AlsaFrontendHandler(domId, *this, getXenStore(), id)));
+	addFrontendHandler(shared_ptr<FrontendHandlerBase>(new AlsaFrontendHandler(domId, *this, id)));
 }
 
 void terminate(int sig, siginfo_t *info, void *ptr)

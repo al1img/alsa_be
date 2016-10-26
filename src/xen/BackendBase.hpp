@@ -64,7 +64,6 @@ public:
 	const std::string& getXsDomPath() const { std::lock_guard<std::mutex> lock(mMutex); return mXsDomPath; }
 	int getId() const { std::lock_guard<std::mutex> lock(mMutex); return mId; }
 	int getDomId() const { std::lock_guard<std::mutex> lock(mMutex); return mDomId; }
-	XenStore& getXenStore() { std::lock_guard<std::mutex> lock(mMutex); return mXenStore; }
 	xc_gnttab* getXcGntTab() { std::lock_guard<std::mutex> lock(mMutex); return mXcGnttab; }
 
 protected:

@@ -207,7 +207,7 @@ void XenStore::initHandle()
 {
 	VLOG(2) << "Init xen store";
 
-	mXsHandle = xs_daemon_open();
+	mXsHandle = xs_open(0);
 
 	if (!mXsHandle)
 	{
@@ -221,7 +221,7 @@ void XenStore::releaseHandle()
 
 	if (mXsHandle)
 	{
-		xs_daemon_close(mXsHandle);
+		xs_close(mXsHandle);
 	}
 }
 

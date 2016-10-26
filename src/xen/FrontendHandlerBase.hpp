@@ -37,6 +37,7 @@ extern "C"
 }
 
 #include "DataChannelBase.hpp"
+#include "XenStore.hpp"
 
 namespace XenBackend {
 
@@ -57,7 +58,7 @@ private:
 class FrontendHandlerBase
 {
 public:
-	FrontendHandlerBase(int domId, BackendBase& backend, XenStore& xenStore, int id = 0);
+	FrontendHandlerBase(int domId, BackendBase& backend, int id = 0);
 	virtual ~FrontendHandlerBase();
 
 	void start();
@@ -79,7 +80,7 @@ private:
 	int mId;
 	int mDomId;
 	BackendBase& mBackend;
-	XenStore& mXenStore;
+	XenStore mXenStore;
 
 	std::string mXsBackendPath;
 	std::string mXsFrontendPath;

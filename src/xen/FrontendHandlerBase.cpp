@@ -49,11 +49,10 @@ using std::vector;
 
 namespace XenBackend {
 
-FrontendHandlerBase::FrontendHandlerBase(int domId, BackendBase& backend, XenStore& xenStore, int id) :
+FrontendHandlerBase::FrontendHandlerBase(int domId, BackendBase& backend, int id) :
 	mId(id),
 	mDomId(domId),
 	mBackend(backend),
-	mXenStore(xenStore),
 	mTerminate(false),
 	mTerminated(false)
 {
