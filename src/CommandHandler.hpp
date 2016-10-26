@@ -1,5 +1,5 @@
 /*
- *  Xen Stat wrapper
+ *  Xen alsa backend
  *  Copyright (c) 2016, Oleksandr Grytsov
  *
  *   This program is free software; you can redistribute it and/or modify
@@ -18,48 +18,25 @@
  *
  */
 
-#ifndef SRC_XEN_XENSTAT_HPP_
-#define SRC_XEN_XENSTAT_HPP_
+#ifndef SRC_COMMANDHANDLER_HPP_
+#define SRC_COMMANDHANDLER_HPP_
 
-#include <exception>
-#include <string>
-#include <vector>
+#include <cstdint>
+
+#include "AlsaPcm.hpp"
 
 extern "C"
 {
-	#include <xenctrl.h>
+	#include "sndif_linux.h"
 }
 
-namespace XenBackend {
-
-class XenStatException : public std::exception
+class CommandHandler
 {
 public:
-	explicit XenStatException(const std::string& msg) : mMsg(msg) {};
-
-	const char* what() const throw() { return mMsg.c_str(); };
+	uint8_t processCommand(const xensnd_req& req);
 
 private:
-	std::string mMsg;
+	Alsa::AlsaPcm mAlsaPcm;
 };
 
-class XenStat
-{
-public:
-	XenStat();
-	~XenStat();
-
-	std::vector<int> getRunningDoms();
-
-private:
-	const int cDomInfoChunkSize = 256;
-
-	xc_interface* mHandle;
-
-	void initHandle();
-	void releaseHandle();
-};
-
-}
-
-#endif /* SRC_XEN_XENSTAT_HPP_ */
+#endif /* SRC_COMMANDHANDLER_HPP_ */

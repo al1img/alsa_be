@@ -28,9 +28,12 @@ extern "C"
 }
 
 #include "BackendBase.hpp"
-#include "EventChannel.hpp"
+#include "CommandHandler.hpp"
 #include "CustomRingBuffer.hpp"
+#include "EventChannel.hpp"
 #include "FrontendHandlerBase.hpp"
+
+class AlsaFrontendHandler;
 
 class StreamRingBuffer : public XenBackend::CustomRingBuffer<
 											xen_sndif_back_ring,
@@ -42,12 +45,13 @@ public:
 	enum class StreamType {PLAYBACK, CAPTURE};
 
 	StreamRingBuffer(int id, StreamType type,
-					 XenBackend::FrontendHandlerBase& frontendHandler,
+					 AlsaFrontendHandler& frontendHandler,
 					 const std::string& refPath);
 
 private:
 	int mId;
 	StreamType mType;
+	CommandHandler mCommandHandler;
 
 	void processRequest(const xensnd_req& req);
 };

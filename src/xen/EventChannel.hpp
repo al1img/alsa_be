@@ -37,7 +37,7 @@ class XenStore;
 class EventChannelException : public std::exception
 {
 public:
-	EventChannelException(const std::string& msg) : mMsg(msg) {};
+	explicit EventChannelException(const std::string& msg) : mMsg(msg) {};
 
 	const char* what() const throw() { return mMsg.c_str(); };
 

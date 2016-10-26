@@ -20,6 +20,7 @@
 
 #include "AlsaBackend.hpp"
 
+#include <memory>
 #include <vector>
 
 #include <signal.h>
@@ -43,12 +44,10 @@ using XenBackend::FrontendHandlerBase;
 using XenBackend::RingBuffer;
 using XenBackend::XenStore;
 
-//using Alsa::AlsaPcm;
-
 unique_ptr<AlsaBackend> alsaBackend;
 
 StreamRingBuffer::StreamRingBuffer(int id, StreamType type,
-								   FrontendHandlerBase& frontendHandler,
+								   AlsaFrontendHandler& frontendHandler,
 								   const string& refPath) :
 	CustomRingBuffer<xen_sndif_back_ring,
 					 xen_sndif_sring,
@@ -69,7 +68,7 @@ void StreamRingBuffer::processRequest(const xensnd_req& req)
 	rsp.u.data.id = req.u.data.id;
 	rsp.u.data.stream_idx = req.u.data.stream_idx;
 	rsp.u.data.operation = req.u.data.operation;
-	rsp.u.data.status = XENSND_RSP_OKAY;
+	rsp.u.data.status = mCommandHandler.processCommand(req);
 
 	sendResponse(rsp);
 }

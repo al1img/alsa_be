@@ -43,7 +43,7 @@ namespace XenBackend {
 class BackendException : public std::exception
 {
 public:
-	BackendException(const std::string& msg) : mMsg(msg) {};
+	explicit BackendException(const std::string& msg) : mMsg(msg) {};
 
 	const char* what() const throw() { return mMsg.c_str(); };
 
@@ -71,7 +71,7 @@ protected:
 	virtual bool getNewFrontend(int& domId, int& id);
 	virtual void onNewFrontend(int domId, int id) = 0;
 
-	void addFrontendHandler(const std::shared_ptr<FrontendHandlerBase> frontendHandler);
+	void addFrontendHandler(std::shared_ptr<FrontendHandlerBase> frontendHandler);
 
 private:
 	int cPollFrontendIntervalMs = 100;

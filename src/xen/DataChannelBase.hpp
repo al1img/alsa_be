@@ -35,7 +35,7 @@ class RingBuffer;
 class DataChannelException : public std::exception
 {
 public:
-	DataChannelException(const std::string& msg) : mMsg(msg) {};
+	explicit DataChannelException(const std::string& msg) : mMsg(msg) {};
 
 	const char* what() const throw() { return mMsg.c_str(); };
 

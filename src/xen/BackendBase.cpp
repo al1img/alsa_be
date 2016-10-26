@@ -92,7 +92,7 @@ void BackendBase::stop()
 	mTerminate = true;
 }
 
-void BackendBase::addFrontendHandler(const shared_ptr<FrontendHandlerBase> frontendHandler)
+void BackendBase::addFrontendHandler(shared_ptr<FrontendHandlerBase> frontendHandler)
 {
 	pair<int, int> ids(make_pair(frontendHandler->getDomId(), frontendHandler->getId()));
 

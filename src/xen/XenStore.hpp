@@ -35,7 +35,7 @@ namespace XenBackend {
 class XenStoreException : public std::exception
 {
 public:
-	XenStoreException(const std::string& msg) : mMsg(msg) {};
+	explicit XenStoreException(const std::string& msg) : mMsg(msg) {};
 
 	const char* what() const throw() { return mMsg.c_str(); };
 

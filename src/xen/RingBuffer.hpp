@@ -33,7 +33,7 @@ class XenStore;
 class RingBufferException : public std::exception
 {
 public:
-	RingBufferException(const std::string& msg) : mMsg(msg) {};
+	explicit RingBufferException(const std::string& msg) : mMsg(msg) {};
 
 	const char* what() const throw() { return mMsg.c_str(); };
 

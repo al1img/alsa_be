@@ -46,7 +46,7 @@ class XenStore;
 class FrontendHandlerException : public std::exception
 {
 public:
-	FrontendHandlerException(const std::string& msg) : mMsg(msg) {};
+	explicit FrontendHandlerException(const std::string& msg) : mMsg(msg) {};
 
 	const char* what() const throw() { return mMsg.c_str(); };
 

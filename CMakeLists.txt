@@ -15,6 +15,7 @@ if (NOT IF_INCLUDE_PATH)
 endif()
 
 set(SOURCES
+	src/alsa/AlsaPcm.cpp
 	src/xen/BackendBase.cpp
 	src/xen/DataChannelBase.cpp
 	src/xen/EventChannel.cpp
@@ -24,10 +25,12 @@ set(SOURCES
 	src/xen/XenStat.cpp
 	src/xen/XenStore.cpp
 	src/AlsaBackend.cpp
+	src/CommandHandler.cpp
 )
 
 include_directories(
 	src
+	src/alsa
 	src/xen
 	${XEN_INCLUDE_PATH}
 	${IF_INCLUDE_PATH}
@@ -39,5 +42,5 @@ link_directories(${XEN_LIB_PATH})
 
 add_executable(alsa_be ${SOURCES})
 
-target_link_libraries(alsa_be xenctrl xenstore glog pthread)
+target_link_libraries(alsa_be xenctrl xenstore asound glog pthread)
 
