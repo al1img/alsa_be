@@ -130,16 +130,7 @@ void BackendBase::createFrontendHandler(const std::pair<int, int>& ids)
 	{
 		LOG(INFO) << "Create new frontend: " << Utils::logDomId(ids.first, ids.second);
 
-		try
-		{
-			onNewFrontend(ids.first, ids.second);
-		}
-		catch(const FrontendHandlerException& e)
-		{
-			mFrontendHandlers.erase(ids);
-
-			LOG(ERROR) << e.what();
-		}
+		onNewFrontend(ids.first, ids.second);
 	}
 }
 
@@ -149,9 +140,9 @@ void BackendBase::checkTerminatedFrontends()
 	{
 		if (it->second->isTerminated())
 		{
-			it = mFrontendHandlers.erase(it);
-
 			LOG(INFO) << "Delete terminated frontend: " << Utils::logDomId(it->first.first, it->first.second);
+
+			it = mFrontendHandlers.erase(it);
 		}
 		else
 		{

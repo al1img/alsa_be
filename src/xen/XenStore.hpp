@@ -21,7 +21,6 @@
 #ifndef INCLUDE_XENSTORE_HPP_
 #define INCLUDE_XENSTORE_HPP_
 
-#include <exception>
 #include <string>
 #include <vector>
 
@@ -30,17 +29,13 @@ extern "C"
 	#include "xenstore.h"
 }
 
+#include "XenException.hpp"
+
 namespace XenBackend {
 
-class XenStoreException : public std::exception
+class XenStoreException : public XenException
 {
-public:
-	explicit XenStoreException(const std::string& msg) : mMsg(msg) {};
-
-	const char* what() const throw() { return mMsg.c_str(); };
-
-private:
-	std::string mMsg;
+	using XenException::XenException;
 };
 
 class XenStore
@@ -66,8 +61,8 @@ private:
 
 	xs_handle*	mXsHandle;
 
-	void initHandle();
-	void releaseHandle();
+	void init();
+	void release();
 };
 
 }

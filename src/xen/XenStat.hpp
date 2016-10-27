@@ -21,26 +21,16 @@
 #ifndef SRC_XEN_XENSTAT_HPP_
 #define SRC_XEN_XENSTAT_HPP_
 
-#include <exception>
-#include <string>
 #include <vector>
 
-extern "C"
-{
-	#include <xenctrl.h>
-}
+#include "XenCtrl.hpp"
+#include "XenException.hpp"
 
 namespace XenBackend {
 
-class XenStatException : public std::exception
+class XenStatException : public XenException
 {
-public:
-	explicit XenStatException(const std::string& msg) : mMsg(msg) {};
-
-	const char* what() const throw() { return mMsg.c_str(); };
-
-private:
-	std::string mMsg;
+	using XenException::XenException;
 };
 
 class XenStat
@@ -49,15 +39,10 @@ public:
 	XenStat();
 	~XenStat();
 
-	std::vector<int> getRunningDoms();
+	std::vector<uint32_t> getRunningDoms();
 
 private:
-	const int cDomInfoChunkSize = 256;
-
-	xc_interface* mHandle;
-
-	void initHandle();
-	void releaseHandle();
+	XenInterface mInterface;
 };
 
 }

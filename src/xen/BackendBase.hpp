@@ -22,7 +22,6 @@
 #define INCLUDE_BACKENDBASE_HPP_
 
 #include <atomic>
-#include <exception>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -30,20 +29,15 @@
 #include <utility>
 
 #include "FrontendHandlerBase.hpp"
+#include "XenException.hpp"
 #include "XenStore.hpp"
 #include "XenStat.hpp"
 
 namespace XenBackend {
 
-class BackendException : public std::exception
+class BackendException : public XenException
 {
-public:
-	explicit BackendException(const std::string& msg) : mMsg(msg) {};
-
-	const char* what() const throw() { return mMsg.c_str(); };
-
-private:
-	std::string mMsg;
+	using XenException::XenException;
 };
 
 class BackendBase

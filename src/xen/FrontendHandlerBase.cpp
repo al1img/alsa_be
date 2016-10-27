@@ -53,26 +53,18 @@ FrontendHandlerBase::FrontendHandlerBase(int domId, BackendBase& backend, int id
 	mId(id),
 	mDomId(domId),
 	mBackend(backend),
-	mXcGnttab(nullptr),
 	mTerminate(false),
 	mTerminated(false)
 {
-	try
-	{
-		mLogId = Utils::logDomId(mDomId, mId) + " - ";
+	mLogId = Utils::logDomId(mDomId, mId) + " - ";
 
-		VLOG(1) << mLogId << "Create frontend handler";
+	VLOG(1) << mLogId << "Create frontend handler";
 
-		initXen();
+	initXenStorePathes();
 
-		setBackendState(XenbusStateInitialising);
-	}
-	catch(const FrontendHandlerException& e)
-	{
-		releaseXen();
+	setBackendState(XenbusStateInitialising);
 
-		throw;
-	}
+	mXenStore.setWatch(mXsFrontendPath);
 }
 
 FrontendHandlerBase::~FrontendHandlerBase()
@@ -81,11 +73,9 @@ FrontendHandlerBase::~FrontendHandlerBase()
 
 	stop();
 
-	mXenStore.clearWatch(mXsFrontendPath);
-
 	setBackendState(XenbusStateClosed);
 
-	releaseXen();
+	mXenStore.clearWatch(mXsFrontendPath);
 
 	VLOG(1) << mLogId << "Delete frontend handler";
 }
@@ -95,8 +85,6 @@ void FrontendHandlerBase::start()
 	lock_guard<mutex> lock(mMutex);
 
 	VLOG(1) << mLogId << "Start frontend handler";
-
-	mXenStore.setWatch(mXsFrontendPath);
 
 	mThread = thread(&FrontendHandlerBase::run, this);
 }
@@ -158,26 +146,6 @@ void FrontendHandlerBase::run()
 	setBackendState(XenbusStateClosing);
 
 	mTerminated = true;
-}
-
-void FrontendHandlerBase::initXen()
-{
-	mXcGnttab = xc_gnttab_open(nullptr, 0);
-
-	if (!mXcGnttab)
-	{
-		throw FrontendHandlerException("Can't open xc grant table");
-	}
-
-	initXenStorePathes();
-}
-
-void FrontendHandlerBase::releaseXen()
-{
-	if (mXcGnttab)
-	{
-		xc_gnttab_close(mXcGnttab);
-	}
 }
 
 void FrontendHandlerBase::initXenStorePathes()

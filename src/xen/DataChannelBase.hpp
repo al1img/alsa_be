@@ -27,20 +27,15 @@
 #include <string>
 #include <thread>
 
+#include "RingBufferBase.hpp"
+#include "XenException.hpp"
+#include "XenCtrl.hpp"
+
 namespace XenBackend {
 
-class EventChannel;
-class RingBuffer;
-
-class DataChannelException : public std::exception
+class DataChannelException : public XenException
 {
-public:
-	explicit DataChannelException(const std::string& msg) : mMsg(msg) {};
-
-	const char* what() const throw() { return mMsg.c_str(); };
-
-private:
-	std::string mMsg;
+	using XenException::XenException;
 };
 
 class FrontendHandlerBase;
@@ -49,7 +44,7 @@ class XenStore;
 class DataChannelBase
 {
 public:
-	DataChannelBase(const std::string& name, std::shared_ptr<EventChannel> eventChannel, std::shared_ptr<RingBuffer> ringBuffer);
+	DataChannelBase(const std::string& name, int domId, int port, std::shared_ptr<RingBufferItf> ringBuffer);
 	virtual ~DataChannelBase();
 
 	void start();
@@ -60,8 +55,8 @@ public:
 private:
 	std::string mName;
 
-	std::shared_ptr<EventChannel> mEventChannel;
-	std::shared_ptr<RingBuffer> mRingBuffer;
+	XenEventChannel mEventChannel;
+	std::shared_ptr<RingBufferItf> mRingBuffer;
 
 	std::thread mThread;
 	mutable std::mutex mMutex;

@@ -33,11 +33,11 @@ XenStore::XenStore()
 {
 	try
 	{
-		initHandle();
+		init();
 	}
-	catch(const XenStoreException& e)
+	catch(const XenException& e)
 	{
-		releaseHandle();
+		release();
 
 		throw;
 	}
@@ -45,7 +45,7 @@ XenStore::XenStore()
 
 XenStore::~XenStore()
 {
-	releaseHandle();
+	release();
 }
 
 string XenStore::getDomainPath(int domId)
@@ -203,9 +203,9 @@ bool XenStore::checkIfExist(const std::string& path)
 	return true;
 }
 
-void XenStore::initHandle()
+void XenStore::init()
 {
-	VLOG(2) << "Init xen store";
+	VLOG(1) << "Init xen store";
 
 	mXsHandle = xs_open(0);
 
@@ -215,9 +215,9 @@ void XenStore::initHandle()
 	}
 }
 
-void XenStore::releaseHandle()
+void XenStore::release()
 {
-	VLOG(2) << "Release xen store";
+	VLOG(1) << "Release xen store";
 
 	if (mXsHandle)
 	{

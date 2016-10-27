@@ -24,9 +24,9 @@
 
 #include <glog/logging.h>
 
-#include "EventChannel.hpp"
 #include "FrontendHandlerBase.hpp"
-#include "RingBuffer.hpp"
+#include "RingBufferBase.hpp"
+#include "XenCtrl.hpp"
 #include "XenStore.hpp"
 
 using std::exception;
@@ -38,15 +38,15 @@ using std::thread;
 
 namespace XenBackend {
 
-DataChannelBase::DataChannelBase(const string& name, shared_ptr<EventChannel> eventChannel, shared_ptr<RingBuffer> ringBuffer) :
+DataChannelBase::DataChannelBase(const string& name, int domId, int port, shared_ptr<RingBufferItf> ringBuffer) :
 	mName(name),
-	mEventChannel(eventChannel),
+	mEventChannel(domId, port),
 	mRingBuffer(ringBuffer),
 	mTerminate(false)
 {
 	VLOG(1) << "Create data channel: " << mName;
 
-	mRingBuffer->setNotifyEventChannelCbk([this] () { mEventChannel->notify(); });
+	mRingBuffer->setNotifyEventChannelCbk([this] () { mEventChannel.notify(); });
 }
 
 DataChannelBase::~DataChannelBase()
@@ -85,7 +85,7 @@ void DataChannelBase::run()
 	{
 		while(!mTerminate)
 		{
-			if (mEventChannel->waitEvent())
+			if (mEventChannel.waitEvent())
 			{
 				mRingBuffer->onRequestReceived();
 			}

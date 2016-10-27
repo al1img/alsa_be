@@ -29,28 +29,22 @@ extern "C"
 
 #include "BackendBase.hpp"
 #include "CommandHandler.hpp"
-#include "CustomRingBuffer.hpp"
-#include "EventChannel.hpp"
+#include "RingBufferBase.hpp"
 #include "FrontendHandlerBase.hpp"
 
 class AlsaFrontendHandler;
 
-class StreamRingBuffer : public XenBackend::CustomRingBuffer<
+class StreamRingBuffer : public XenBackend::RingBufferBase<
 											xen_sndif_back_ring,
 											xen_sndif_sring,
 											xensnd_req,
 											xensnd_resp>
 {
 public:
-	enum class StreamType {PLAYBACK, CAPTURE};
-
-	StreamRingBuffer(int id, StreamType type,
-					 AlsaFrontendHandler& frontendHandler,
-					 const std::string& refPath);
+	StreamRingBuffer(int id, Alsa::StreamType type, int domId, int ref);
 
 private:
 	int mId;
-	StreamType mType;
 	CommandHandler mCommandHandler;
 
 	void processRequest(const xensnd_req& req);
@@ -63,7 +57,7 @@ class AlsaFrontendHandler : public XenBackend::FrontendHandlerBase
 private:
 	void onBind();
 
-	void createStreamChannel(int id, StreamRingBuffer::StreamType type, const std::string& streamPath);
+	void createStreamChannel(int id, Alsa::StreamType type, const std::string& streamPath);
 	void processCard(const std::string& cardPath);
 	void processDevice(const std::string& devPath);
 	void processStream(const std::string& streamPath);

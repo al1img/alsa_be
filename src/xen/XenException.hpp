@@ -1,5 +1,5 @@
 /*
- *  Xen event channel wrapper
+ *  Xen Exception
  *  Copyright (c) 2016, Oleksandr Grytsov
  *
  *   This program is free software; you can redistribute it and/or modify
@@ -18,26 +18,18 @@
  *
  */
 
-#ifndef INCLUDE_EVENTCHANNEL_HPP_
-#define INCLUDE_EVENTCHANNEL_HPP_
+#ifndef SRC_XEN_XENEXCEPTION_HPP_
+#define SRC_XEN_XENEXCEPTION_HPP_
 
 #include <exception>
 #include <string>
 
-extern "C"
-{
-	#include <xenctrl.h>
-}
-
 namespace XenBackend {
 
-class FrontendHandlerBase;
-class XenStore;
-
-class EventChannelException : public std::exception
+class XenException : public std::exception
 {
 public:
-	explicit EventChannelException(const std::string& msg) : mMsg(msg) {};
+	explicit XenException(const std::string& msg) : mMsg(msg) {};
 
 	const char* what() const throw() { return mMsg.c_str(); };
 
@@ -45,30 +37,6 @@ private:
 	std::string mMsg;
 };
 
-class EventChannel
-{
-public:
-	EventChannel(FrontendHandlerBase& frontendHandler, const std::string& portPath);
-	~EventChannel();
-
-	bool waitEvent();
-
-	void notify();
-
-private:
-	const int cPoolEventTimeoutMs = 100;
-
-	FrontendHandlerBase& mFrontendHandler;
-	int mDomId;
-	std::string mPortPath;
-	xc_evtchn *mHandle;
-	int mPort;
-	XenStore& mXenStore;
-
-	void initXen();
-	void releaseXen();
-};
-
 }
 
-#endif /* INCLUDE_EVENTCHANNEL_HPP_ */
+#endif /* SRC_XEN_XENEXCEPTION_HPP_ */

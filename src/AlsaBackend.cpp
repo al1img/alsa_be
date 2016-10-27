@@ -38,23 +38,16 @@ using std::vector;
 using std::unique_ptr;
 
 using XenBackend::DataChannelBase;
-using XenBackend::EventChannel;
 using XenBackend::FrontendHandlerBase;
-using XenBackend::RingBuffer;
+using XenBackend::RingBufferItf;
 using XenBackend::XenStore;
 
 unique_ptr<AlsaBackend> alsaBackend;
 
-StreamRingBuffer::StreamRingBuffer(int id, StreamType type,
-								   AlsaFrontendHandler& frontendHandler,
-								   const string& refPath) :
-	CustomRingBuffer<xen_sndif_back_ring,
-					 xen_sndif_sring,
-					 xensnd_req,
-					 xensnd_resp>(frontendHandler, refPath, 4096),
+StreamRingBuffer::StreamRingBuffer(int id, Alsa::StreamType type, int domId, int ref) :
+	RingBufferBase<xen_sndif_back_ring, xen_sndif_sring, xensnd_req, xensnd_resp>(domId, ref, 4096),
 	mId(id),
-	mType(type),
-	mCommandHandler(frontendHandler.getDomId(), frontendHandler.getXcGnttab())
+	mCommandHandler(type, domId)
 {
 	VLOG(1) << "Create stream ring buffer: id = " << id << ", type:" << static_cast<int>(type);
 }
@@ -125,22 +118,30 @@ void AlsaFrontendHandler::processDevice(const std::string& devPath)
 void AlsaFrontendHandler::processStream(const std::string& streamPath)
 {
 	int id = getXenStore().readInt(streamPath + "/" + XENSND_FIELD_STREAM_INDEX);
-	StreamRingBuffer::StreamType streamType = StreamRingBuffer::StreamType::PLAYBACK;
+	Alsa::StreamType streamType = Alsa::StreamType::PLAYBACK;
 
 	if (getXenStore().readString(streamPath + "/" + XENSND_FIELD_TYPE) == XENSND_STREAM_TYPE_CAPTURE)
 	{
-		streamType = StreamRingBuffer::StreamType::CAPTURE;
+		streamType = Alsa::StreamType::CAPTURE;
 	}
 
 	createStreamChannel(id, streamType, streamPath);
 }
 
-void AlsaFrontendHandler::createStreamChannel(int id, StreamRingBuffer::StreamType type, const string& streamPath)
+void AlsaFrontendHandler::createStreamChannel(int id, Alsa::StreamType type, const string& streamPath)
 {
-	shared_ptr<EventChannel> eventChannel(new EventChannel(*this, streamPath + "/" + XENSND_FIELD_EVT_CHNL));
-	shared_ptr<RingBuffer> ringBuffer(new StreamRingBuffer(id, type, *this, streamPath + "/" + XENSND_FIELD_RING_REF));
+	auto port = getXenStore().readInt(streamPath + "/" + XENSND_FIELD_EVT_CHNL);
 
-	addChannel(shared_ptr<DataChannelBase>(new DataChannelBase("stream " + to_string(id), eventChannel, ringBuffer)));
+	VLOG(1) << "Read event channel port: " << port << ", dom: " << getDomId();
+
+	uint32_t ref = getXenStore().readInt(streamPath + "/" + XENSND_FIELD_RING_REF);
+
+	VLOG(1) << "Read ring buffer ref: " << ref << ", dom: " << getDomId();
+
+
+	shared_ptr<RingBufferItf> ringBuffer(new StreamRingBuffer(id, type, getDomId(), ref));
+
+	addChannel(shared_ptr<DataChannelBase>(new DataChannelBase("stream " + to_string(id), getDomId(), port, ringBuffer)));
 }
 
 // Uncomment for manual dom
@@ -205,11 +206,11 @@ int main(int argc, char *argv[])
 	}
 	catch(const exception& e)
 	{
-		LOG(ERROR) << e.what();
+		LOG(FATAL) << e.what();
 	}
 	catch(...)
 	{
-		LOG(ERROR) << "Unknown error";
+		LOG(FATAL) << "Unknown error";
 	}
 
 	return 0;

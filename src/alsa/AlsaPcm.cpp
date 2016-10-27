@@ -17,9 +17,10 @@ using std::to_string;
 
 namespace Alsa {
 
-AlsaPcm::AlsaPcm(const std::string& name) :
+AlsaPcm::AlsaPcm(StreamType type, const std::string& name) :
 	mHandle(nullptr),
-	mName(name)
+	mName(name),
+	mType(type)
 {
 	VLOG(1) << "Create pcm device: " << mName;
 }
@@ -37,9 +38,10 @@ void AlsaPcm::open(const AlsaPcmParams& params, bool forCapture)
 
 	try
 	{
-		VLOG(1) << "Open pcm device: " << mName;
+		VLOG(1) << "Open pcm device: " << mName << ", format: " << params.format
+				<< ", rate: " << params.rate << ", channels: " << params.numChannels;
 
-		if (snd_pcm_open(&mHandle, mName.c_str(), forCapture ? SND_PCM_STREAM_CAPTURE : SND_PCM_STREAM_PLAYBACK, 0) < 0)
+		if (snd_pcm_open(&mHandle, mName.c_str(), mType == StreamType::PLAYBACK ? SND_PCM_STREAM_PLAYBACK : SND_PCM_STREAM_CAPTURE, 0) < 0)
 		{
 			throw AlsaPcmException("Can't open audio device " + mName);
 		}
@@ -81,8 +83,12 @@ void AlsaPcm::open(const AlsaPcmParams& params, bool forCapture)
 			throw AlsaPcmException("Can't set hwParams " + mName);
 		}
 
+		if (snd_pcm_prepare(mHandle) < 0)
+		{
+			throw AlsaPcmException("Can't prepare audio interface for use");
+		}
 	}
-	catch(const exception& e)
+	catch(const AlsaPcmException& e)
 	{
 		if (hwParams)
 		{
@@ -101,8 +107,11 @@ void AlsaPcm::close()
 
 	if (mHandle)
 	{
+		snd_pcm_drain(mHandle);
 		snd_pcm_close(mHandle);
 	}
+
+	mHandle = nullptr;
 }
 
 void AlsaPcm::read(void* buffer, ssize_t size)
@@ -121,11 +130,29 @@ void AlsaPcm::write(const void* buffer, ssize_t size)
 {
 	DVLOG(2) << "Write to pcm device: " << mName << ", size: " << size;
 
+	void* data = const_cast<void*>(buffer);
 	auto numFrames = snd_pcm_bytes_to_frames(mHandle, size);
 
-	if (snd_pcm_writei(mHandle, buffer, numFrames) != numFrames)
+	while(numFrames > 0)
 	{
-		throw AlsaPcmException("Write to audio interface failed: " + mName);
+		if (auto status = snd_pcm_writei(mHandle, data, numFrames))
+		{
+			if (status == -EPIPE)
+			{
+				LOG(WARNING) << "Device: " << mName << ", message: " << snd_strerror(status);
+
+				snd_pcm_prepare(mHandle);
+			}
+			else if (status < 0)
+			{
+				throw AlsaPcmException("Write to audio interface failed: " + mName + ". Error: " + snd_strerror(status));
+			}
+			else
+			{
+				numFrames -= status;
+				data = &(static_cast<uint8_t*>(data)[snd_pcm_frames_to_bytes(mHandle, status)]);
+			}
+		}
 	}
 }
 

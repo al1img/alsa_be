@@ -1,5 +1,5 @@
 /*
- *  Xen custom ring buffer
+ *  Xen base ring buffer
  *  Copyright (c) 2016, Oleksandr Grytsov
  *
  *   This program is free software; you can redistribute it and/or modify
@@ -21,44 +21,42 @@
 #ifndef INCLUDE_CUSTOMRINGBUFFER_HPP_
 #define INCLUDE_CUSTOMRINGBUFFER_HPP_
 
-#include "RingBuffer.hpp"
-
 #include <cstring>
+#include <functional>
 
-#include <sys/mman.h>
-
-extern "C"
-{
-	#include <xenctrl.h>
-}
+#include "XenCtrl.hpp"
+#include "XenException.hpp"
 
 namespace XenBackend {
 
-template<typename Ring, typename SRing, typename Req, typename Rsp>
-class CustomRingBuffer : public RingBuffer
+class RingBufferException : public XenException
+{
+	using XenException::XenException;
+};
+
+class RingBufferItf
 {
 public:
-	CustomRingBuffer(FrontendHandlerBase& frontendHandler, const std::string& refPath, int pageSize) :
-		RingBuffer(frontendHandler, refPath),
-		mGnttab(mFrontendHandler.getXcGnttab()),
-		mPageSize(pageSize)
+	virtual ~RingBufferItf() {}
+	virtual void onRequestReceived() = 0;
+	virtual void setNotifyEventChannelCbk(std::function<void()> cbk) = 0;
+};
+
+template<typename Ring, typename SRing, typename Req, typename Rsp>
+class RingBufferBase : public RingBufferItf
+{
+public:
+	RingBufferBase(int domId, int ref, int pageSize) :
+		mGnttab(domId, ref, PROT_READ | PROT_WRITE)
 	{
-		mRing.sring = static_cast<SRing*>(xc_gnttab_map_grant_ref(mGnttab, mDomId, mRef, PROT_READ | PROT_WRITE));
+		mRing.sring = static_cast<SRing*>(mGnttab.getBuffer());
 
 		if (!mRing.sring)
 		{
 			throw RingBufferException("Can't map grant reference");
 		}
 
-		BACK_RING_INIT(&mRing, mRing.sring, mPageSize);
-	}
-
-	~CustomRingBuffer()
-	{
-		if (mRing.sring)
-		{
-			xc_gnttab_munmap(mGnttab, mRing.sring, 1);
-		}
+		BACK_RING_INIT(&mRing, mRing.sring, pageSize);
 	}
 
 protected:
@@ -81,10 +79,14 @@ protected:
 	}
 
 private:
-	xc_gnttab* mGnttab;
-	int mPageSize;
-
 	Ring mRing;
+	XenGnttabBuffer mGnttab;
+	std::function<void()> mNotifyEventChannelCbk;
+
+	void setNotifyEventChannelCbk(std::function<void()> cbk)
+	{
+		mNotifyEventChannelCbk = cbk;
+	}
 
 	void onRequestReceived()
 	{

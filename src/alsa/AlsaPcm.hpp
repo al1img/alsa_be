@@ -14,6 +14,8 @@
 
 namespace Alsa {
 
+enum class StreamType {PLAYBACK, CAPTURE};
+
 class AlsaPcmException : public std::exception
 {
 public:
@@ -38,7 +40,7 @@ struct AlsaPcmParams
 class AlsaPcm
 {
 public:
-	explicit AlsaPcm(const std::string& name = "default");
+	explicit AlsaPcm(StreamType type, const std::string& name = "default");
 	~AlsaPcm();
 
 	void open(const AlsaPcmParams& params, bool forCapture = false);
@@ -50,6 +52,7 @@ public:
 private:
 	snd_pcm_t *mHandle;
 	std::string mName;
+	StreamType mType;
 
 	void showCardInfo(int card);
 	void showPcmDevicesInfo(snd_ctl_t* handle);

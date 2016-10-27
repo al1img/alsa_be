@@ -24,13 +24,15 @@
 
 #include <glog/logging.h>
 
+using XenBackend::XenException;
+using XenBackend::XenGnttabBuffer;
+
 using Alsa::AlsaPcmException;
 using Alsa::AlsaPcmParams;
 
-CommandHandler::CommandHandler(int domId, xc_gnttab* gnttab) :
+CommandHandler::CommandHandler(Alsa::StreamType type, int domId) :
 	mDomId(domId),
-	mGnttab(gnttab),
-	mBuffer(nullptr),
+	mAlsaPcm(type),
 	mCmdTable{&CommandHandler::open, &CommandHandler::close, &CommandHandler::read, &CommandHandler::write}
 {
 }
@@ -61,48 +63,54 @@ uint8_t CommandHandler::processCommand(const xensnd_req& req)
 
 		status = XENSND_RSP_ERROR;
 	}
+	catch(const XenException& e)
+	{
+		LOG(ERROR) << e.what();
+
+		status = XENSND_RSP_ERROR;
+	}
+
+	DVLOG(2) << "Return status: " << static_cast<int>(status);
 
 	return status;
 }
 
 void CommandHandler::open(const xensnd_req& req)
 {
-	DVLOG(2) << "Handle Open command";
+	DVLOG(2) << "Handle command [OPEN]";
 
 	const xensnd_open_req& openReq = req.u.data.op.open;
 
-	if (mBuffer)
+	mGnttab.reset(new XenGnttabBuffer(mDomId, openReq.grefs, XENSND_MAX_PAGES_PER_REQUEST, PROT_READ | PROT_WRITE));
+
+	if (mGnttab)
 	{
 		mAlsaPcm.open(AlsaPcmParams(openReq.format, openReq.rate, openReq.channels));
 	}
-
 }
 
 void CommandHandler::close(const xensnd_req& req)
 {
-	DVLOG(2) << "Handle Close command";
+	DVLOG(2) << "Handle command [CLOSE]";
+
+	mGnttab.reset();
+
+	mAlsaPcm.close();
 }
 
 void CommandHandler::read(const xensnd_req& req)
 {
-	DVLOG(2) << "Handle Read command";
+	DVLOG(2) << "Handle command [READ]";
 }
 
 void CommandHandler::write(const xensnd_req& req)
 {
-	DVLOG(2) << "Handle Write command";
-}
+	DVLOG(2) << "Handle command [WRITE]";
 
-// TODO: create class to handle refs
+	if (mGnttab)
+	{
+		const xensnd_write_req& writeReq = req.u.data.op.write;
 
-void CommandHandler::mapRefs(const grant_ref_t* refs)
-{
-	mBuffer = xc_gnttab_map_domain_grant_refs(mGnttab, XENSND_MAX_PAGES_PER_REQUEST,
-											  mDomId, const_cast<uint32_t*>(refs),
-											  PROT_READ | PROT_WRITE);
-}
-
-void CommandHandler::unmapRefs()
-{
-
+		mAlsaPcm.write(mGnttab->getBuffer(), writeReq.len);
+	}
 }

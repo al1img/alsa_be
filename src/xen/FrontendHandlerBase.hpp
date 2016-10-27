@@ -22,7 +22,6 @@
 #define INCLUDE_FRONTENDHANDLERBASE_HPP_
 
 #include <atomic>
-#include <exception>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -33,10 +32,10 @@
 extern "C"
 {
 	#include <xen/io/xenbus.h>
-	#include <xenctrl.h>
 }
 
 #include "DataChannelBase.hpp"
+#include "XenException.hpp"
 #include "XenStore.hpp"
 
 namespace XenBackend {
@@ -44,15 +43,9 @@ namespace XenBackend {
 class BackendBase;
 class XenStore;
 
-class FrontendHandlerException : public std::exception
+class FrontendHandlerException : public XenException
 {
-public:
-	explicit FrontendHandlerException(const std::string& msg) : mMsg(msg) {};
-
-	const char* what() const throw() { return mMsg.c_str(); };
-
-private:
-	std::string mMsg;
+	using XenException::XenException;
 };
 
 class FrontendHandlerBase
@@ -68,7 +61,6 @@ public:
 	int getId() const { std::lock_guard<std::mutex> lock(mMutex); return mId; }
 	const std::string& getXsFrontendPath() const { std::lock_guard<std::mutex> lock(mMutex); return mXsFrontendPath; }
 	XenStore& getXenStore() { std::lock_guard<std::mutex> lock(mMutex); return mXenStore; }
-	xc_gnttab* getXcGnttab() const { std::lock_guard<std::mutex> lock(mMutex); return mXcGnttab; };
 	bool isTerminated() const { return mTerminated; }
 
 protected:
@@ -80,7 +72,6 @@ private:
 	int mId;
 	int mDomId;
 	BackendBase& mBackend;
-	xc_gnttab* mXcGnttab;
 
 	XenStore mXenStore;
 
@@ -98,8 +89,6 @@ private:
 
 	void run();
 
-	void initXen();
-	void releaseXen();
 	void initXenStorePathes();
 	void waitForBackendInitialized();
 	void waitForFrontendInitialized();
