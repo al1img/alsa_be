@@ -63,12 +63,6 @@ uint8_t CommandHandler::processCommand(const xensnd_req& req)
 
 		status = XENSND_RSP_ERROR;
 	}
-	catch(const XenException& e)
-	{
-		LOG(ERROR) << e.what();
-
-		status = XENSND_RSP_ERROR;
-	}
 
 	DVLOG(2) << "Return status: " << static_cast<int>(status);
 
@@ -83,10 +77,7 @@ void CommandHandler::open(const xensnd_req& req)
 
 	mGnttab.reset(new XenGnttabBuffer(mDomId, openReq.grefs, XENSND_MAX_PAGES_PER_REQUEST, PROT_READ | PROT_WRITE));
 
-	if (mGnttab)
-	{
-		mAlsaPcm.open(AlsaPcmParams(openReq.format, openReq.rate, openReq.channels));
-	}
+	mAlsaPcm.open(AlsaPcmParams(openReq.format, openReq.rate, openReq.channels));
 }
 
 void CommandHandler::close(const xensnd_req& req)
@@ -101,16 +92,17 @@ void CommandHandler::close(const xensnd_req& req)
 void CommandHandler::read(const xensnd_req& req)
 {
 	DVLOG(2) << "Handle command [READ]";
+
+	const xensnd_read_req& readReq = req.u.data.op.read;
+
+	mAlsaPcm.read(mGnttab->getBuffer(), readReq.len);
 }
 
 void CommandHandler::write(const xensnd_req& req)
 {
 	DVLOG(2) << "Handle command [WRITE]";
 
-	if (mGnttab)
-	{
-		const xensnd_write_req& writeReq = req.u.data.op.write;
+	const xensnd_write_req& writeReq = req.u.data.op.write;
 
-		mAlsaPcm.write(mGnttab->getBuffer(), writeReq.len);
-	}
+	mAlsaPcm.write(mGnttab->getBuffer(), writeReq.len);
 }

@@ -120,9 +120,26 @@ void AlsaPcm::read(void* buffer, ssize_t size)
 
 	auto numFrames = snd_pcm_bytes_to_frames(mHandle, size);
 
-	if (snd_pcm_readi(mHandle, buffer, numFrames) != numFrames)
+	while(numFrames > 0)
 	{
-		throw AlsaPcmException("Read from audio interface failed: " + mName);
+		if (auto status = snd_pcm_readi(mHandle, buffer, numFrames))
+		{
+			if (status == -EPIPE)
+			{
+				LOG(WARNING) << "Device: " << mName << ", message: " << snd_strerror(status);
+
+				snd_pcm_prepare(mHandle);
+			}
+			else if (status < 0)
+			{
+				throw AlsaPcmException("Read from audio interface failed: " + mName + ". Error: " + snd_strerror(status));
+			}
+			else
+			{
+				numFrames -= status;
+				buffer = &(static_cast<uint8_t*>(buffer)[snd_pcm_frames_to_bytes(mHandle, status)]);
+			}
+		}
 	}
 }
 
