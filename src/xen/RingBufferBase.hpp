@@ -48,14 +48,7 @@ public:
 	RingBufferBase(int domId, int ref, int pageSize) :
 		mGnttab(domId, ref, PROT_READ | PROT_WRITE)
 	{
-		mRing.sring = static_cast<SRing*>(mGnttab.getBuffer());
-
-		if (!mRing.sring)
-		{
-			throw RingBufferException("Can't map grant reference");
-		}
-
-		BACK_RING_INIT(&mRing, mRing.sring, pageSize);
+		BACK_RING_INIT(&mRing, static_cast<SRing*>(mGnttab.getBuffer()), pageSize);
 	}
 
 protected:
@@ -63,7 +56,7 @@ protected:
 
 	void sendResponse(const Rsp& rsp)
 	{
-		int notify = 0;
+		bool notify = false;
 
 		*RING_GET_RESPONSE(&mRing, mRing.rsp_prod_pvt) = rsp;
 
