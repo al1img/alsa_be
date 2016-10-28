@@ -26,6 +26,10 @@
 #include "XenCtrl.hpp"
 #include "XenException.hpp"
 
+extern "C" {
+#include <xen/io/ring.h>
+}
+
 namespace XenBackend {
 
 class RingBufferException : public XenException

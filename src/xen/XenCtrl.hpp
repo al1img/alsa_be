@@ -26,9 +26,8 @@
 
 #include <sys/mman.h>
 
-extern "C"
-{
-	#include <xenctrl.h>
+extern "C" {
+#include <xenctrl.h>
 }
 
 #include "XenException.hpp"

@@ -24,9 +24,8 @@
 #include <string>
 #include <vector>
 
-extern "C"
-{
-	#include "xenstore.h"
+extern "C" {
+#include <xenstore.h>
 }
 
 #include "XenException.hpp"

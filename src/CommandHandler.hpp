@@ -25,15 +25,13 @@
 #include <memory>
 #include <vector>
 
-extern "C"
-{
-	#include "xenctrl.h"
-	#include "sndif_linux.h"
-}
-
 #include "AlsaPcm.hpp"
 
 #include "XenCtrl.hpp"
+
+extern "C" {
+#include "sndif_linux.h"
+}
 
 class CommandHandler
 {

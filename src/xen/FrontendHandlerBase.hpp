@@ -29,9 +29,8 @@
 #include <thread>
 #include <vector>
 
-extern "C"
-{
-	#include <xen/io/xenbus.h>
+extern "C" {
+#include <xen/io/xenbus.h>
 }
 
 #include "DataChannelBase.hpp"

@@ -23,9 +23,8 @@
 
 #include <string>
 
-extern "C"
-{
-	#include "xen/io/xenbus.h"
+extern "C" {
+#include <xen/io/xenbus.h>
 }
 
 namespace XenBackend {
