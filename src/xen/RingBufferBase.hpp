@@ -21,7 +21,6 @@
 #ifndef INCLUDE_CUSTOMRINGBUFFER_HPP_
 #define INCLUDE_CUSTOMRINGBUFFER_HPP_
 
-#include <cstring>
 #include <functional>
 
 #include "XenCtrl.hpp"
@@ -66,7 +65,7 @@ protected:
 	{
 		int notify = 0;
 
-		std::memcpy(RING_GET_RESPONSE(&mRing, mRing.rsp_prod_pvt), &rsp, sizeof(rsp));
+		*RING_GET_RESPONSE(&mRing, mRing.rsp_prod_pvt) = rsp;
 
 		mRing.rsp_prod_pvt++;
 
@@ -112,7 +111,7 @@ private:
 					throw RingBufferException("Ring buffer consumer overflow");
 				}
 
-				std::memcpy(&req, RING_GET_REQUEST(&mRing, rc), sizeof(req));
+				req = *RING_GET_REQUEST(&mRing, rc);
 
 				mRing.req_cons = ++rc;
 
