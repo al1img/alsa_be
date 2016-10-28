@@ -35,11 +35,12 @@ CommandHandler::CommandHandler(Alsa::StreamType type, int domId) :
 	mAlsaPcm(type),
 	mCmdTable{&CommandHandler::open, &CommandHandler::close, &CommandHandler::read, &CommandHandler::write}
 {
+	VLOG(1) << "Create command handler, dom: " << mDomId;
 }
 
 CommandHandler::~CommandHandler()
 {
-
+	VLOG(1) << "Delete command handler, dom: " << mDomId;
 }
 
 uint8_t CommandHandler::processCommand(const xensnd_req& req)
@@ -64,7 +65,7 @@ uint8_t CommandHandler::processCommand(const xensnd_req& req)
 		status = XENSND_RSP_ERROR;
 	}
 
-	DVLOG(2) << "Return status: " << static_cast<int>(status);
+	DVLOG(2) << "Return status: [" << static_cast<int>(status) << "]";
 
 	return status;
 }

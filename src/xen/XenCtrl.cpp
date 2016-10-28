@@ -223,12 +223,13 @@ XenGnttab::~XenGnttab()
 }
 
 XenGnttabBuffer::XenGnttabBuffer(int domId, uint32_t ref, int prot) :
-	mDomId(domId)
+		XenGnttabBuffer(domId, &ref, 1, prot)
 {
-	init(&ref, 1, prot);
+
 }
 
-XenGnttabBuffer::XenGnttabBuffer(int domId, const uint32_t* refs, size_t count, int prot)
+XenGnttabBuffer::XenGnttabBuffer(int domId, const uint32_t* refs, size_t count, int prot) :
+	mDomId(domId)
 {
 	init(refs, count, prot);
 }
