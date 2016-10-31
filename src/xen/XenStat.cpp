@@ -55,4 +55,20 @@ vector<uint32_t> XenStat::getRunningDoms()
 	return runningDomains;
 }
 
+vector<uint32_t> XenStat::getExistingDoms()
+{
+	vector<uint32_t> existingDomains;
+
+	vector<xc_domaininfo_t> domInfos;
+
+	mInterface.getDomainsInfo(domInfos);
+
+	for(auto info : domInfos)
+	{
+		existingDomains.push_back(info.domain);
+	}
+
+	return existingDomains;
+}
+
 }

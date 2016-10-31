@@ -93,7 +93,7 @@ void BackendBase::addFrontendHandler(shared_ptr<FrontendHandlerBase> frontendHan
 
 bool BackendBase::getNewFrontend(int& domId, int& id)
 {
-	for (auto dom : mXenStat.getRunningDoms())
+	for (auto dom : mXenStat.getExistingDoms())
 	{
 		if (dom == mDomId)
 		{

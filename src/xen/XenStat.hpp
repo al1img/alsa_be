@@ -40,6 +40,7 @@ public:
 	~XenStat();
 
 	std::vector<uint32_t> getRunningDoms();
+	std::vector<uint32_t> getExistingDoms();
 
 private:
 	XenInterface mInterface;
