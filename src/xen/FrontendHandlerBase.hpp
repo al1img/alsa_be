@@ -93,6 +93,7 @@ private:
 	void waitForFrontendInitialized();
 	void waitForFrontendConnected();
 	void monitorFrontendState();
+	void checkTerminatedChannels();
 	void frontendStateChanged(xenbus_state state);
 
 	xenbus_state waitForState(const std::string& nodePath, const std::vector<xenbus_state>& states);

@@ -52,6 +52,8 @@ public:
 
 	const std::string& getName() const { std::lock_guard<std::mutex> lock(mMutex); return mName; }
 
+	bool isTerminated() const { return mTerminated; }
+
 private:
 	std::string mName;
 
@@ -61,6 +63,7 @@ private:
 	std::thread mThread;
 	mutable std::mutex mMutex;
 	std::atomic_bool mTerminate;
+	std::atomic_bool mTerminated;
 
 	void run();
 };

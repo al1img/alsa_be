@@ -42,7 +42,8 @@ DataChannelBase::DataChannelBase(const string& name, int domId, int port, shared
 	mName(name),
 	mEventChannel(domId, port),
 	mRingBuffer(ringBuffer),
-	mTerminate(false)
+	mTerminate(false),
+	mTerminated(false)
 {
 	VLOG(1) << "Create data channel: " << mName;
 
@@ -67,8 +68,6 @@ void DataChannelBase::start()
 
 void DataChannelBase::stop()
 {
-	lock_guard<mutex> lock(mMutex);
-
 	VLOG(1) << "Stop data channel: " << mName;
 
 	mTerminate = true;
@@ -95,6 +94,8 @@ void DataChannelBase::run()
 	{
 		LOG(ERROR) << e.what();
 	}
+
+	mTerminated = true;
 }
 
 }

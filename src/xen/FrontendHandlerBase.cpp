@@ -91,8 +91,6 @@ void FrontendHandlerBase::start()
 
 void FrontendHandlerBase::stop()
 {
-	lock_guard<mutex> lock(mMutex);
-
 	VLOG(1) << mLogId << "Stop frontend handler";
 
 	mTerminate = true;
@@ -136,6 +134,8 @@ void FrontendHandlerBase::run()
 		while(!mTerminate)
 		{
 			monitorFrontendState();
+
+			checkTerminatedChannels();
 		}
 	}
 	catch(const exception& e)
@@ -217,6 +217,25 @@ void FrontendHandlerBase::monitorFrontendState()
 		{
 			frontendStateChanged(static_cast<xenbus_state>(
 					mXenStore.readInt(mXsFrontendPath + "/state")));
+		}
+	}
+}
+
+void FrontendHandlerBase::checkTerminatedChannels()
+{
+	lock_guard<mutex> lock(mMutex);
+
+	for (auto it = mChannels.begin(); it != mChannels.end();)
+	{
+		if (it->second->isTerminated())
+		{
+			LOG(INFO) << mLogId << "Delete terminated channel: " << it->first;
+
+			it = mChannels.erase(it);
+		}
+		else
+		{
+			++it;
 		}
 	}
 }
