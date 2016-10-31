@@ -119,9 +119,11 @@ void FrontendHandlerBase::run()
 
 		//waitForBackendInitialized();
 
+		waitForFrontendInitialising();
+
 		setBackendState(XenbusStateInitWait);
 
-		waitForFrontendInitialized();
+		waitForFrontendInitialised();
 
 		onBind();
 
@@ -168,7 +170,7 @@ void FrontendHandlerBase::initXenStorePathes()
 	VLOG(1) << "Backend path:  " << mXsBackendPath;
 }
 
-void FrontendHandlerBase::waitForBackendInitialized()
+void FrontendHandlerBase::waitForBackendInitialised()
 {
 	mXenStore.setWatch(mXsBackendPath);
 
@@ -186,27 +188,36 @@ void FrontendHandlerBase::waitForBackendInitialized()
 	mXenStore.clearWatch(mXsBackendPath);
 }
 
-void FrontendHandlerBase::waitForFrontendInitialized()
+void FrontendHandlerBase::waitForFrontendInitialising()
+{
+	LOG(INFO) << mLogId << "Wait for frontend initializing";
+
+	auto state = waitForState(mXsFrontendPath, {XenbusStateInitialising});
+
+	LOG(INFO) << mLogId << "Frontend state changed to: " << Utils::logState(state);
+}
+
+void FrontendHandlerBase::waitForFrontendInitialised()
 {
 	LOG(INFO) << mLogId << "Wait for frontend initialized";
 
-	auto state = waitForState(mXsFrontendPath, {XenbusStateInitialised, XenbusStateConnected});
+	auto state = waitForState(mXsFrontendPath, {XenbusStateInitialised});
 
 	LOG(INFO) << mLogId << "Frontend state changed to: " << Utils::logState(state);
-
-	if (state == XenbusStateConnected)
-	{
-		LOG(WARNING) << mLogId << "Frontend is already connected";
-	}
 }
 
 void FrontendHandlerBase::waitForFrontendConnected()
 {
 	LOG(INFO) << mLogId << "Wait for frontend connected";
 
-	auto state = waitForState(mXsFrontendPath, {XenbusStateConnected});
+	auto state = waitForState(mXsFrontendPath, {XenbusStateConnected, XenbusStateInitialising});
 
 	LOG(INFO) << mLogId << "Frontend state changed to: " << Utils::logState(state);
+
+	if (state == XenbusStateInitialising)
+	{
+		throw FrontendHandlerException(mLogId + "Frontend terminated");
+	}
 }
 
 void FrontendHandlerBase::monitorFrontendState()

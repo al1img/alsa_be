@@ -89,8 +89,9 @@ private:
 	void run();
 
 	void initXenStorePathes();
-	void waitForBackendInitialized();
-	void waitForFrontendInitialized();
+	void waitForBackendInitialised();
+	void waitForFrontendInitialising();
+	void waitForFrontendInitialised();
 	void waitForFrontendConnected();
 	void monitorFrontendState();
 	void checkTerminatedChannels();
