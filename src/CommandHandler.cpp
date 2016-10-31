@@ -30,6 +30,35 @@ using XenBackend::XenGnttabBuffer;
 using Alsa::AlsaPcmException;
 using Alsa::AlsaPcmParams;
 
+CommandHandler::PcmFormat CommandHandler::sPcmFormat[] = {
+	{ .sndif = XENSND_PCM_FORMAT_U8,                 .alsa = SND_PCM_FORMAT_U8 },
+	{ .sndif = XENSND_PCM_FORMAT_S8,                 .alsa = SND_PCM_FORMAT_S8 },
+	{ .sndif = XENSND_PCM_FORMAT_U16_LE,             .alsa = SND_PCM_FORMAT_U16_LE },
+	{ .sndif = XENSND_PCM_FORMAT_U16_BE,             .alsa = SND_PCM_FORMAT_U16_BE },
+	{ .sndif = XENSND_PCM_FORMAT_S16_LE,             .alsa = SND_PCM_FORMAT_S16_LE },
+	{ .sndif = XENSND_PCM_FORMAT_S16_BE,             .alsa = SND_PCM_FORMAT_S16_BE },
+	{ .sndif = XENSND_PCM_FORMAT_U24_LE,             .alsa = SND_PCM_FORMAT_U24_LE },
+	{ .sndif = XENSND_PCM_FORMAT_U24_BE,             .alsa = SND_PCM_FORMAT_U24_BE },
+	{ .sndif = XENSND_PCM_FORMAT_S24_LE,             .alsa = SND_PCM_FORMAT_S24_LE },
+	{ .sndif = XENSND_PCM_FORMAT_S24_BE,             .alsa = SND_PCM_FORMAT_S24_BE },
+	{ .sndif = XENSND_PCM_FORMAT_U32_LE,             .alsa = SND_PCM_FORMAT_U32_LE },
+	{ .sndif = XENSND_PCM_FORMAT_U32_BE,             .alsa = SND_PCM_FORMAT_U32_BE },
+	{ .sndif = XENSND_PCM_FORMAT_S32_LE,             .alsa = SND_PCM_FORMAT_S32_LE },
+	{ .sndif = XENSND_PCM_FORMAT_S32_BE,             .alsa = SND_PCM_FORMAT_S32_BE },
+	{ .sndif = XENSND_PCM_FORMAT_A_LAW,              .alsa = SND_PCM_FORMAT_A_LAW },
+	{ .sndif = XENSND_PCM_FORMAT_MU_LAW,             .alsa = SND_PCM_FORMAT_MU_LAW },
+	{ .sndif = XENSND_PCM_FORMAT_F32_LE,             .alsa = SND_PCM_FORMAT_FLOAT_LE },
+	{ .sndif = XENSND_PCM_FORMAT_F32_BE,             .alsa = SND_PCM_FORMAT_FLOAT_BE },
+	{ .sndif = XENSND_PCM_FORMAT_F64_LE,             .alsa = SND_PCM_FORMAT_FLOAT64_LE },
+	{ .sndif = XENSND_PCM_FORMAT_F64_BE,             .alsa = SND_PCM_FORMAT_FLOAT64_BE },
+	{ .sndif = XENSND_PCM_FORMAT_IEC958_SUBFRAME_LE, .alsa = SND_PCM_FORMAT_IEC958_SUBFRAME_LE },
+	{ .sndif = XENSND_PCM_FORMAT_IEC958_SUBFRAME_BE, .alsa = SND_PCM_FORMAT_IEC958_SUBFRAME_BE },
+	{ .sndif = XENSND_PCM_FORMAT_IMA_ADPCM,          .alsa = SND_PCM_FORMAT_IMA_ADPCM },
+	{ .sndif = XENSND_PCM_FORMAT_MPEG,               .alsa = SND_PCM_FORMAT_MPEG },
+	{ .sndif = XENSND_PCM_FORMAT_GSM,                .alsa = SND_PCM_FORMAT_GSM },
+	{ .sndif = XENSND_PCM_FORMAT_SPECIAL,            .alsa = SND_PCM_FORMAT_SPECIAL },
+};
+
 CommandHandler::CommandHandler(Alsa::StreamType type, int domId) :
 	mDomId(domId),
 	mAlsaPcm(type),
@@ -78,7 +107,7 @@ void CommandHandler::open(const xensnd_req& req)
 
 	mGnttab.reset(new XenGnttabBuffer(mDomId, openReq.grefs, XENSND_MAX_PAGES_PER_REQUEST, PROT_READ | PROT_WRITE));
 
-	mAlsaPcm.open(AlsaPcmParams(openReq.format, openReq.rate, openReq.channels));
+	mAlsaPcm.open(AlsaPcmParams(convertPcmFormat(openReq.format), openReq.rate, openReq.channels));
 }
 
 void CommandHandler::close(const xensnd_req& req)
@@ -106,4 +135,17 @@ void CommandHandler::write(const xensnd_req& req)
 	const xensnd_write_req& writeReq = req.u.data.op.write;
 
 	mAlsaPcm.write(mGnttab->getBuffer(), writeReq.len);
+}
+
+snd_pcm_format_t CommandHandler::convertPcmFormat(uint8_t format)
+{
+	for (auto value : sPcmFormat)
+	{
+		if (value.sndif == format)
+		{
+			return value.alsa;
+		}
+	}
+
+	throw AlsaPcmException("Can't convert format");
 }

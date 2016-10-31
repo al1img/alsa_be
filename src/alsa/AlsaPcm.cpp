@@ -61,7 +61,7 @@ void AlsaPcm::open(const AlsaPcmParams& params, bool forCapture)
 			throw AlsaPcmException("Can't set access " + mName);
 		}
 
-		if (snd_pcm_hw_params_set_format(mHandle, hwParams, static_cast<snd_pcm_format_t>(params.format)) < 0)
+		if (snd_pcm_hw_params_set_format(mHandle, hwParams, params.format) < 0)
 		{
 			throw AlsaPcmException("Can't set format " + mName);
 		}

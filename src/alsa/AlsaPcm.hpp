@@ -29,10 +29,10 @@ private:
 
 struct AlsaPcmParams
 {
-	AlsaPcmParams(unsigned f, unsigned r, unsigned c) :
+	AlsaPcmParams(snd_pcm_format_t f, unsigned r, unsigned c) :
 		format(f), rate(r), numChannels(c) {}
 
-	unsigned			format;
+	snd_pcm_format_t	format;
 	unsigned			rate;
 	unsigned			numChannels;
 };

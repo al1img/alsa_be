@@ -42,6 +42,14 @@ public:
 	uint8_t processCommand(const xensnd_req& req);
 
 private:
+	struct PcmFormat
+	{
+		uint8_t sndif;
+		snd_pcm_format_t alsa;
+	};
+
+	static PcmFormat sPcmFormat[];
+
 	int mDomId;
 	std::unique_ptr<XenBackend::XenGnttabBuffer> mGnttab;
 
@@ -55,6 +63,8 @@ private:
 	void close(const xensnd_req& req);
 	void read(const xensnd_req& req);
 	void write(const xensnd_req& req);
+
+	snd_pcm_format_t convertPcmFormat(uint8_t format);
 };
 
 #endif /* SRC_COMMANDHANDLER_HPP_ */
