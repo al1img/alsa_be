@@ -52,7 +52,7 @@ public:
 
 	void setWatch(const std::string& path);
 	void clearWatch(const std::string& path);
-	bool checkWatches();
+	bool checkWatches(std::string& retPath, std::string& retToken);
 	const std::vector<std::string> readDirectory(const std::string& path);
 
 private:

@@ -129,37 +129,39 @@ void XenStore::clearWatch(const string& path)
 	xs_unwatch(mXsHandle, path.c_str(), "");
 }
 
-bool XenStore::checkWatches()
+bool XenStore::checkWatches(string& retPath, string& retToken)
 {
-	pollfd fds;
 
-	fds.fd = xs_fileno(mXsHandle);
-	fds.events = POLLIN;
+	int ret = 1;
 
-	auto ret = poll(&fds, 1, cPollWatchesTimeoutMs);
-
-	if (ret > 0)
+	do
 	{
-		char** result = nullptr;
+		auto result = xs_check_watch(mXsHandle);
 
-		do
+		if (result)
 		{
-			result = xs_check_watch(mXsHandle);
+			retPath = result[XS_WATCH_PATH];
+			retToken = result[XS_WATCH_TOKEN];
 
-			if (result)
-			{
-				free(result);
-			}
+			free(result);
+
+			return true;
 		}
-		while(result);
 
-		return true;
-	}
 
-	if (ret < 0)
-	{
-		throw XenStoreException("Can't poll watches");
+		pollfd fds;
+
+		fds.fd = xs_fileno(mXsHandle);
+		fds.events = POLLIN;
+
+		ret = poll(&fds, 1, cPollWatchesTimeoutMs);
+
+		if (ret < 0)
+		{
+			throw XenStoreException("Can't poll watches");
+		}
 	}
+	while(ret > 0);
 
 	return false;
 }

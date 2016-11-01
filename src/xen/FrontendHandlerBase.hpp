@@ -72,6 +72,8 @@ private:
 	int mDomId;
 	BackendBase& mBackend;
 
+	xenbus_state mBackendState;
+
 	XenStore mXenStore;
 
 	std::string mXsBackendPath;
@@ -90,14 +92,9 @@ private:
 
 	void initXenStorePathes();
 	void waitForBackendInitialised();
-	void waitForFrontendInitialising();
-	void waitForFrontendInitialised();
-	void waitForFrontendConnected();
 	void monitorFrontendState();
 	void checkTerminatedChannels();
 	void frontendStateChanged(xenbus_state state);
-
-	xenbus_state waitForState(const std::string& nodePath, const std::vector<xenbus_state>& states);
 
 	void setBackendState(xenbus_state state);
 };

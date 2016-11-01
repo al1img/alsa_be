@@ -53,6 +53,7 @@ FrontendHandlerBase::FrontendHandlerBase(int domId, BackendBase& backend, int id
 	mId(id),
 	mDomId(domId),
 	mBackend(backend),
+	mBackendState(XenbusStateUnknown),
 	mTerminate(false),
 	mTerminated(false)
 {
@@ -63,8 +64,6 @@ FrontendHandlerBase::FrontendHandlerBase(int domId, BackendBase& backend, int id
 	initXenStorePathes();
 
 	setBackendState(XenbusStateInitialising);
-
-	mXenStore.setWatch(mXsFrontendPath);
 }
 
 FrontendHandlerBase::~FrontendHandlerBase()
@@ -74,8 +73,6 @@ FrontendHandlerBase::~FrontendHandlerBase()
 	stop();
 
 	setBackendState(XenbusStateClosed);
-
-	mXenStore.clearWatch(mXsFrontendPath);
 
 	VLOG(1) << mLogId << "Delete frontend handler";
 }
@@ -116,22 +113,7 @@ void FrontendHandlerBase::run()
 {
 	try
 	{
-
-		//waitForBackendInitialized();
-
-		waitForFrontendInitialising();
-
-		setBackendState(XenbusStateInitWait);
-
-		waitForFrontendInitialised();
-
-		onBind();
-
-		setBackendState(XenbusStateConnected);
-
-		waitForFrontendConnected();
-
-		LOG(INFO) << mLogId << "Initialization completed";
+		mXenStore.setWatch(mXsFrontendPath);
 
 		while(!mTerminate)
 		{
@@ -144,6 +126,8 @@ void FrontendHandlerBase::run()
 	{
 		LOG(ERROR) << e.what();
 	}
+
+	mXenStore.clearWatch(mXsFrontendPath);
 
 	setBackendState(XenbusStateClosing);
 
@@ -176,55 +160,29 @@ void FrontendHandlerBase::waitForBackendInitialised()
 
 	LOG(INFO) << mLogId << "Wait for backend initialized";
 
-	auto state = waitForState(mXsBackendPath, {XenbusStateInitialising, XenbusStateClosed,
-											   XenbusStateInitWait, XenbusStateConnected,
-											   XenbusStateClosing});
-
-	if (state == XenbusStateInitWait || state == XenbusStateConnected)
+	while(!mTerminate)
 	{
-		LOG(ERROR) << "Fudging state to " << XenbusStateInitialising;
+		string path, token;
+
+		if (mXenStore.checkWatches(path, token))
+		{
+			if (static_cast<xenbus_state>(mXenStore.readInt(mXsFrontendPath + "/state")) == XenbusStateInitialising)
+			{
+				break;
+			}
+		}
 	}
 
 	mXenStore.clearWatch(mXsBackendPath);
-}
-
-void FrontendHandlerBase::waitForFrontendInitialising()
-{
-	LOG(INFO) << mLogId << "Wait for frontend initializing";
-
-	auto state = waitForState(mXsFrontendPath, {XenbusStateInitialising});
-
-	LOG(INFO) << mLogId << "Frontend state changed to: " << Utils::logState(state);
-}
-
-void FrontendHandlerBase::waitForFrontendInitialised()
-{
-	LOG(INFO) << mLogId << "Wait for frontend initialized";
-
-	auto state = waitForState(mXsFrontendPath, {XenbusStateInitialised});
-
-	LOG(INFO) << mLogId << "Frontend state changed to: " << Utils::logState(state);
-}
-
-void FrontendHandlerBase::waitForFrontendConnected()
-{
-	LOG(INFO) << mLogId << "Wait for frontend connected";
-
-	auto state = waitForState(mXsFrontendPath, {XenbusStateConnected, XenbusStateInitialising});
-
-	LOG(INFO) << mLogId << "Frontend state changed to: " << Utils::logState(state);
-
-	if (state == XenbusStateInitialising)
-	{
-		throw FrontendHandlerException(mLogId + "Frontend terminated");
-	}
 }
 
 void FrontendHandlerBase::monitorFrontendState()
 {
 	while(!mTerminate)
 	{
-		if (mXenStore.checkWatches())
+		string path, token;
+
+		if (mXenStore.checkWatches(path, token))
 		{
 			frontendStateChanged(static_cast<xenbus_state>(
 					mXenStore.readInt(mXsFrontendPath + "/state")));
@@ -253,36 +211,52 @@ void FrontendHandlerBase::checkTerminatedChannels()
 
 void FrontendHandlerBase::frontendStateChanged(xenbus_state state)
 {
+	static xenbus_state prevState = XenbusStateUnknown;
+
+	if (state == prevState)
+	{
+		return;
+	}
+
+	prevState = state;
+
 	LOG(INFO) << mLogId << "Frontend state changed to: " << Utils::logState(state);
 
-	if (state != XenbusStateConnected)
+	switch(state)
 	{
-		mChannels.clear();
+	case XenbusStateInitialising:
+
+		if (mBackendState != XenbusStateInitialising)
+		{
+			LOG(WARNING) << mLogId << "Frontend restarted";
+
+			mTerminate = true;
+		}
+		else
+		{
+			setBackendState(XenbusStateInitWait);
+		}
+
+		break;
+
+	case XenbusStateInitialised:
+
+		onBind();
+
+		setBackendState(XenbusStateConnected);
+
+		break;
+
+	case XenbusStateClosing:
+	case XenbusStateClosed:
 
 		mTerminate = true;
+
+		break;
+
+	default:
+		break;
 	}
-}
-
-xenbus_state FrontendHandlerBase::waitForState(const string& nodePath, const vector<xenbus_state>& states)
-{
-	while(true)
-	{
-		xenbus_state state = static_cast<xenbus_state>(mXenStore.readInt(nodePath + "/state"));
-
-		if (find(states.begin(), states.end(), state) != states.end())
-		{
-			return state;
-		}
-
-		while(!mTerminate && !mXenStore.checkWatches());
-
-		if (mTerminate)
-		{
-			throw FrontendHandlerException(mLogId + "Frontend terminated");
-		}
-	}
-
-	return XenbusStateUnknown;
 }
 
 void FrontendHandlerBase::setBackendState(xenbus_state state)
@@ -290,6 +264,8 @@ void FrontendHandlerBase::setBackendState(xenbus_state state)
 	LOG(INFO) << mLogId << "Set backend state to: " << Utils::logState(state);
 
 	auto path = mXsBackendPath + "/state";
+
+	mBackendState = state;
 
 	mXenStore.writeInt(path, state);
 }
