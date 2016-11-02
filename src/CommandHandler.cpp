@@ -125,7 +125,7 @@ void CommandHandler::read(const xensnd_req& req)
 
 	const xensnd_read_req& readReq = req.u.data.op.read;
 
-	mAlsaPcm.read(mGnttab->getBuffer(), readReq.len);
+	mAlsaPcm.read(&(static_cast<uint8_t*>(mGnttab->getBuffer())[readReq.offset]), readReq.len);
 }
 
 void CommandHandler::write(const xensnd_req& req)
@@ -134,7 +134,7 @@ void CommandHandler::write(const xensnd_req& req)
 
 	const xensnd_write_req& writeReq = req.u.data.op.write;
 
-	mAlsaPcm.write(mGnttab->getBuffer(), writeReq.len);
+	mAlsaPcm.write(&(static_cast<uint8_t*>(mGnttab->getBuffer())[writeReq.offset]), writeReq.len);
 }
 
 snd_pcm_format_t CommandHandler::convertPcmFormat(uint8_t format)

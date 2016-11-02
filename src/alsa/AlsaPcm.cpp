@@ -114,7 +114,7 @@ void AlsaPcm::close()
 	mHandle = nullptr;
 }
 
-void AlsaPcm::read(void* buffer, ssize_t size)
+void AlsaPcm::read(uint8_t* buffer, ssize_t size)
 {
 	DVLOG(2) << "Read from pcm device: " << mName << ", size: " << size;
 
@@ -137,22 +137,21 @@ void AlsaPcm::read(void* buffer, ssize_t size)
 			else
 			{
 				numFrames -= status;
-				buffer = &(static_cast<uint8_t*>(buffer)[snd_pcm_frames_to_bytes(mHandle, status)]);
+				buffer = &buffer[snd_pcm_frames_to_bytes(mHandle, status)];
 			}
 		}
 	}
 }
 
-void AlsaPcm::write(const void* buffer, ssize_t size)
+void AlsaPcm::write(uint8_t* buffer, ssize_t size)
 {
 	DVLOG(2) << "Write to pcm device: " << mName << ", size: " << size;
 
-	void* data = const_cast<void*>(buffer);
 	auto numFrames = snd_pcm_bytes_to_frames(mHandle, size);
 
 	while(numFrames > 0)
 	{
-		if (auto status = snd_pcm_writei(mHandle, data, numFrames))
+		if (auto status = snd_pcm_writei(mHandle, buffer, numFrames))
 		{
 			if (status == -EPIPE)
 			{
@@ -167,7 +166,7 @@ void AlsaPcm::write(const void* buffer, ssize_t size)
 			else
 			{
 				numFrames -= status;
-				data = &(static_cast<uint8_t*>(data)[snd_pcm_frames_to_bytes(mHandle, status)]);
+				buffer = &buffer[snd_pcm_frames_to_bytes(mHandle, status)];
 			}
 		}
 	}

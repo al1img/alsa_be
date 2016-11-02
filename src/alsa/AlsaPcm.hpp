@@ -45,8 +45,8 @@ public:
 
 	void open(const AlsaPcmParams& params, bool forCapture = false);
 	void close();
-	void read(void* buffer, ssize_t size);
-	void write(const void* buffer, ssize_t size);
+	void read(uint8_t* buffer, ssize_t size);
+	void write(uint8_t* buffer, ssize_t size);
 	void info();
 
 private:
