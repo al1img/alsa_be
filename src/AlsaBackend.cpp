@@ -206,7 +206,7 @@ int main(int argc, char *argv[])
 	}
 	catch(const exception& e)
 	{
-		LOG(FATAL) << e.what();
+		LOG(ERROR) << e.what();
 	}
 	catch(...)
 	{

@@ -21,7 +21,6 @@
 #ifndef INCLUDE_ALSABACKEND_HPP_
 #define INCLUDE_ALSABACKEND_HPP_
 
-
 #include "BackendBase.hpp"
 #include "CommandHandler.hpp"
 #include "FrontendHandlerBase.hpp"
@@ -30,6 +29,7 @@
 extern "C" {
 #include "sndif_linux.h"
 }
+
 class AlsaFrontendHandler;
 
 class StreamRingBuffer : public XenBackend::RingBufferBase<

@@ -21,6 +21,8 @@ set(SOURCES
 	src/xen/FrontendHandlerBase.cpp
 	src/xen/Utils.cpp
 	src/xen/XenCtrl.cpp
+	src/xen/XenEvtchn.cpp
+	src/xen/XenGnttab.cpp
 	src/xen/XenStat.cpp
 	src/xen/XenStore.cpp
 	src/AlsaBackend.cpp
@@ -41,5 +43,5 @@ link_directories(${XEN_LIB_PATH})
 
 add_executable(alsa_be ${SOURCES})
 
-target_link_libraries(alsa_be xenctrl xenstore asound glog pthread)
+target_link_libraries(alsa_be xenctrl xenstore xenevtchn xengnttab asound glog pthread)
 

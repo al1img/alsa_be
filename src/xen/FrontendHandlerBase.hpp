@@ -71,6 +71,7 @@ private:
 	BackendBase& mBackend;
 
 	xenbus_state mBackendState;
+	xenbus_state mFrontendState;
 
 	XenStore mXenStore;
 
@@ -79,13 +80,16 @@ private:
 
 	std::map<std::string, std::shared_ptr<DataChannelBase>> mChannels;
 
+	bool mWaitForFrontendInitialising;
+
 	std::string mLogId;
 
 	void run();
 
 	void initXenStorePathes();
 	void checkTerminatedChannels();
-	void frontendStateChanged(const std::string& path);
+	void frontendPathChanged(const std::string& path);
+	void frontendStateChanged(xenbus_state state);
 	void setBackendState(xenbus_state state);
 };
 

@@ -18,17 +18,18 @@
  *
  */
 
-#ifndef INCLUDE_CUSTOMRINGBUFFER_HPP_
-#define INCLUDE_CUSTOMRINGBUFFER_HPP_
+#ifndef INCLUDE_RINGBUFFERBASE_HPP_
+#define INCLUDE_RINGBUFFERBASE_HPP_
 
 #include <functional>
 
-#include "XenCtrl.hpp"
-#include "XenException.hpp"
-
 extern "C" {
+#include "xenctrl.h"
 #include <xen/io/ring.h>
 }
+
+#include "XenException.hpp"
+#include "XenGnttab.hpp"
 
 namespace XenBackend {
 
@@ -125,4 +126,4 @@ private:
 
 }
 
-#endif /* INCLUDE_CUSTOMRINGBUFFER_HPP_ */
+#endif /* INCLUDE_RINGBUFFERBASE_HPP_ */

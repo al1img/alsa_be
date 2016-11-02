@@ -26,7 +26,6 @@
 
 #include "FrontendHandlerBase.hpp"
 #include "RingBufferBase.hpp"
-#include "XenCtrl.hpp"
 #include "XenStore.hpp"
 
 using std::exception;

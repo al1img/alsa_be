@@ -1,5 +1,5 @@
 /*
- *  Xen Ctrl wrapper
+ *  Xen evtchn wrapper
  *  Copyright (c) 2016, Oleksandr Grytsov
  *
  *   This program is free software; you can redistribute it and/or modify
@@ -18,42 +18,41 @@
  *
  */
 
-
-#ifndef SRC_XEN_XENCTRL_HPP_
-#define SRC_XEN_XENCTRL_HPP_
-
-#include <vector>
+#ifndef SRC_XEN_XENEVTCHN_HPP_
+#define SRC_XEN_XENEVTCHN_HPP_
 
 extern "C" {
-#include <xenctrl.h>
+#include <xenevtchn.h>
 }
 
 #include "XenException.hpp"
 
 namespace XenBackend {
 
-class XenCtrlException : public XenException
+class XenEvtchnException : public XenException
 {
 	using XenException::XenException;
 };
 
-class XenInterface
+class XenEvtchn
 {
 public:
-	XenInterface();
-	~XenInterface();
+	XenEvtchn(int domId, int port);
+	~XenEvtchn();
 
-	void getDomainsInfo(std::vector<xc_domaininfo_t>& infos);
+	bool waitEvent();
+	void notify();
 
 private:
-	const int cDomInfoChunkSize = 64;
+	const int cPoolEventTimeoutMs = 100;
 
-	xc_interface* mHandle;
+	xenevtchn_handle *mHandle;
+	int mPort;
 
-	void init();
+	void init(int domId, int port);
 	void release();
 };
 
 }
 
-#endif /* SRC_XEN_XENCTRL_HPP_ */
+#endif /* SRC_XEN_XENEVTCHN_HPP_ */

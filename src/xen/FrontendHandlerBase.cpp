@@ -54,7 +54,9 @@ FrontendHandlerBase::FrontendHandlerBase(int domId, BackendBase& backend, int id
 	mId(id),
 	mDomId(domId),
 	mBackend(backend),
-	mBackendState(XenbusStateUnknown)
+	mBackendState(XenbusStateUnknown),
+	mFrontendState(XenbusStateUnknown),
+	mWaitForFrontendInitialising(true)
 {
 	mLogId = Utils::logDomId(mDomId, mId) + " - ";
 
@@ -64,7 +66,7 @@ FrontendHandlerBase::FrontendHandlerBase(int domId, BackendBase& backend, int id
 
 	setBackendState(XenbusStateInitialising);
 
-	mXenStore.setWatch(mXsFrontendPath + "/state", bind(&FrontendHandlerBase::frontendStateChanged, this, _1));
+	mXenStore.setWatch(mXsFrontendPath + "/state", bind(&FrontendHandlerBase::frontendPathChanged, this, _1), true);
 }
 
 FrontendHandlerBase::~FrontendHandlerBase()
@@ -107,7 +109,6 @@ void FrontendHandlerBase::initXenStorePathes()
 
 xenbus_state FrontendHandlerBase::getBackendState()
 {
-
 	for (auto channel : mChannels)
 	{
 		if (channel.second->isTerminated())
@@ -119,63 +120,77 @@ xenbus_state FrontendHandlerBase::getBackendState()
 	return mBackendState;
 }
 
-void FrontendHandlerBase::frontendStateChanged(const string& path)
+void FrontendHandlerBase::frontendPathChanged(const string& path)
 {
-	static xenbus_state prevState = XenbusStateUnknown;
-
 	try
 	{
-		auto state = static_cast<xenbus_state>(mXenStore.readInt(mXsFrontendPath + "/state"));
+		auto state = static_cast<xenbus_state>(mXenStore.readInt(path));
 
-		if (state == prevState)
+		if (state == mFrontendState)
 		{
 			return;
 		}
 
-		prevState = state;
+		mFrontendState = state;
 
-		LOG(INFO) << mLogId << "Frontend state changed to: " << Utils::logState(state);
-
-		switch(state)
+		if (mWaitForFrontendInitialising && state != XenbusStateInitialising)
 		{
-		case XenbusStateInitialising:
+			LOG(INFO) << mLogId << "Wait for frontend initialising";
 
-			if (mBackendState != XenbusStateInitialising)
-			{
-				LOG(WARNING) << mLogId << "Frontend restarted";
-
-				setBackendState(XenbusStateClosing);
-			}
-			else
-			{
-				setBackendState(XenbusStateInitWait);
-			}
-
-			break;
-
-		case XenbusStateInitialised:
-
-			onBind();
-
-			setBackendState(XenbusStateConnected);
-
-			break;
-
-		case XenbusStateClosing:
-		case XenbusStateClosed:
-			setBackendState(XenbusStateClosing);
-
-			break;
-
-		default:
-			break;
+			return;
 		}
+
+		mWaitForFrontendInitialising = false;
+
+		frontendStateChanged(state);
 	}
 	catch(const exception& e)
 	{
 		LOG(ERROR) << mLogId << e.what();
 
 		setBackendState(XenbusStateClosing);
+	}
+}
+
+void FrontendHandlerBase::frontendStateChanged(xenbus_state state)
+{
+	LOG(INFO) << mLogId << "Frontend state changed to: " << Utils::logState(state);
+
+	switch(state)
+	{
+	case XenbusStateInitialising:
+
+		if (mBackendState != XenbusStateInitialising &&
+			mBackendState != XenbusStateInitWait)
+		{
+			LOG(WARNING) << mLogId << "Frontend restarted";
+
+			setBackendState(XenbusStateClosing);
+		}
+		else
+		{
+			setBackendState(XenbusStateInitWait);
+		}
+
+		break;
+
+	case XenbusStateInitialised:
+
+		onBind();
+
+		setBackendState(XenbusStateConnected);
+
+		break;
+
+	case XenbusStateClosing:
+	case XenbusStateClosed:
+
+		setBackendState(XenbusStateClosing);
+
+		break;
+
+	default:
+		break;
 	}
 }
 

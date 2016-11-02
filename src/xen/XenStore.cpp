@@ -23,6 +23,8 @@
 
 #include <glog/logging.h>
 
+using std::exception;
+using std::function;
 using std::lock_guard;
 using std::mutex;
 using std::string;
@@ -32,7 +34,8 @@ using std::vector;
 
 namespace XenBackend {
 
-XenStore::XenStore()
+XenStore::XenStore() :
+	mCheckWatchResult(false)
 {
 	try
 	{
@@ -50,7 +53,7 @@ XenStore::~XenStore()
 {
 	clearWatches();
 
-	waitHandlerFinished();
+	waitWatchesThreadFinished();
 
 	release();
 }
@@ -115,7 +118,7 @@ void XenStore::writeInt(const string& path, int value)
 	}
 }
 
-void XenStore::removePath(const std::string& path)
+void XenStore::removePath(const string& path)
 {
 	if (!xs_rm(mXsHandle, XBT_NULL, path.c_str()))
 	{
@@ -123,7 +126,7 @@ void XenStore::removePath(const std::string& path)
 	}
 }
 
-void XenStore::setWatch(const std::string& path, std::function<void(const std::string& path)> callback)
+void XenStore::setWatch(const string& path, function<void(const string& path)> callback, bool initNotify)
 {
 	lock_guard<mutex> itfLock(mItfMutex);
 
@@ -134,12 +137,17 @@ void XenStore::setWatch(const std::string& path, std::function<void(const std::s
 
 	lock_guard<mutex> lock(mMutex);
 
-	if (mWatches.size() == 0)
+	if (initNotify)
 	{
-		mThread = thread(&XenStore::handleWatches, this);
+		mInitNotifyWatches.push_back(path);
 	}
 
-	mWatches[path] = callback;
+	if (mWatches.size() == 0)
+	{
+		mWatches[path] = callback;
+
+		mThread = thread(&XenStore::watchesThread, this);
+	}
 }
 
 void XenStore::clearWatch(const string& path)
@@ -156,7 +164,7 @@ void XenStore::clearWatch(const string& path)
 
 	if (mWatches.empty())
 	{
-		waitHandlerFinished();
+		waitWatchesThreadFinished();
 	}
 }
 
@@ -184,7 +192,7 @@ const vector<string> XenStore::readDirectory(const string& path)
 	return vector<string>();
 }
 
-bool XenStore::checkIfExist(const std::string& path)
+bool XenStore::checkIfExist(const string& path)
 {
 	unsigned length;
 	auto pData = xs_read(mXsHandle, XBT_NULL, path.c_str(), &length);
@@ -221,78 +229,130 @@ void XenStore::release()
 	}
 }
 
-bool XenStore::checkWatches(string& retPath, string& retToken)
+string XenStore::checkWatches()
 {
-	static bool toCheck = false;
-	int ret = 1;
+	string path;
 
-	do
+	if (!mCheckWatchResult)
 	{
-		if (toCheck)
-		{
-			auto result = xs_check_watch(mXsHandle);
-
-			if (result)
-			{
-				retPath = result[XS_WATCH_PATH];
-				retToken = result[XS_WATCH_TOKEN];
-
-				free(result);
-
-				return true;
-			}
-		}
-
-		pollfd fds = { .fd = xs_fileno(mXsHandle), .events = POLLIN};
-
-		ret = poll(&fds, 1, cPollWatchesTimeoutMs);
-
-		if (ret < 0)
-		{
-			LOG(ERROR) << "Can't poll watches";
-		}
-
-		if (ret > 0)
-		{
-			toCheck = true;
-		}
-		else
-		{
-			toCheck = false;
-		}
+		mCheckWatchResult = pollXsWatchFd();
 	}
-	while(ret > 0);
+
+	if (mCheckWatchResult)
+	{
+		path = checkXsWatch();
+
+		mCheckWatchResult = !path.empty();
+	}
+
+	return path;
+}
+
+string XenStore::checkXsWatch()
+{
+	string path;
+
+	auto result = xs_check_watch(mXsHandle);
+
+	if (result)
+	{
+		path = result[XS_WATCH_PATH];
+
+		free(result);
+	}
+
+	return path;
+}
+
+bool XenStore::pollXsWatchFd()
+{
+	pollfd fds = { .fd = xs_fileno(mXsHandle), .events = POLLIN};
+
+	auto ret = poll(&fds, 1, cPollWatchesTimeoutMs);
+
+	if (ret < 0)
+	{
+		throw XenStoreException("Can't poll watches");
+	}
+
+	if (ret > 0)
+	{
+		return true;
+	}
 
 	return false;
 }
 
-void XenStore::handleWatches()
+void XenStore::watchesThread()
 {
-	bool terminate = false;
-
-	while(!terminate)
+	try
 	{
-		string path, token;
-
-		if (checkWatches(path, token))
+		while(!isWatchesEmpty())
 		{
-			if (mWatches.find(path) != mWatches.end())
-			{
-				VLOG(1) << "Watch triggered: " << path << ", " << token;
+			string path = getInitNotifyPath();
 
-				mWatches[path](path);
+			if (path.empty())
+			{
+				path = checkWatches();
 			}
-		}
-		else
-		{
-			lock_guard<mutex> lock(mMutex);
 
-			if (mWatches.empty())
+			if (!path.empty())
 			{
-				terminate = true;
+				auto callback = getWatchCallback(path);
+
+				if (callback)
+				{
+					callback(path);
+				}
 			}
 		}
 	}
+	catch(const exception& e)
+	{
+		LOG(ERROR) << e.what();
+	}
+}
+
+string XenStore::getInitNotifyPath()
+{
+	string path;
+
+	if (mInitNotifyWatches.size())
+	{
+		path = mInitNotifyWatches.front();
+		mInitNotifyWatches.pop_front();
+	}
+
+	return path;
+}
+
+function<void(const string&)> XenStore::getWatchCallback(string& path)
+{
+	lock_guard<mutex> lock(mMutex);
+
+	function<void(const string&)> callback = nullptr;
+
+	auto result = mWatches.find(path);
+	if (result != mWatches.end())
+	{
+		VLOG(1) << "Watch triggered: " << path;
+
+		callback = result->second;
+	}
+
+	return callback;
+}
+
+bool XenStore::isWatchesEmpty()
+{
+	lock_guard<mutex> lock(mMutex);
+
+	if (mWatches.empty())
+	{
+		return true;
+	}
+
+	return false;
 }
 
 void XenStore::clearWatches()
@@ -309,7 +369,7 @@ void XenStore::clearWatches()
 	mWatches.clear();
 }
 
-void XenStore::waitHandlerFinished()
+void XenStore::waitWatchesThreadFinished()
 {
 	VLOG(1) << "Wait for watch handler finished";
 

@@ -23,6 +23,7 @@
 
 #include <atomic>
 #include <functional>
+#include <list>
 #include <map>
 #include <mutex>
 #include <string>
@@ -55,7 +56,7 @@ public:
 	void removePath(const std::string& path);
 	bool checkIfExist(const std::string& path);
 
-	void setWatch(const std::string& path, std::function<void(const std::string& path)> callback);
+	void setWatch(const std::string& path, std::function<void(const std::string& path)> callback, bool initNotify = false);
 	void clearWatch(const std::string& path);
 	const std::vector<std::string> readDirectory(const std::string& path);
 
@@ -65,18 +66,26 @@ private:
 	xs_handle*	mXsHandle;
 
 	std::map<std::string, std::function<void(const std::string&)>> mWatches;
+	std::list<std::string> mInitNotifyWatches;
 
 	std::thread mThread;
 	std::mutex mMutex;
 	std::mutex mItfMutex;
+	bool mCheckWatchResult;
 
 	void init();
 	void release();
 
-	bool checkWatches(std::string& retPath, std::string& retToken);
-	void handleWatches();
+	void watchesThread();
+
+	std::string checkWatches();
+	std::string checkXsWatch();
+	bool pollXsWatchFd();
+	std::string getInitNotifyPath();
+	std::function<void(const std::string&)> getWatchCallback(std::string& path);
+	bool isWatchesEmpty();
 	void clearWatches();
-	void waitHandlerFinished();
+	void waitWatchesThreadFinished();
 };
 
 }

@@ -29,7 +29,7 @@
 
 #include "RingBufferBase.hpp"
 #include "XenException.hpp"
-#include "XenCtrl.hpp"
+#include "XenEvtchn.hpp"
 
 namespace XenBackend {
 
@@ -57,7 +57,7 @@ public:
 private:
 	std::string mName;
 
-	XenEventChannel mEventChannel;
+	XenEvtchn mEventChannel;
 	std::shared_ptr<RingBufferItf> mRingBuffer;
 
 	std::thread mThread;

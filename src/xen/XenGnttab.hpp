@@ -1,5 +1,5 @@
 /*
- *  Xen Ctrl wrapper
+ *  Xen gnttab wrapper
  *  Copyright (c) 2016, Oleksandr Grytsov
  *
  *   This program is free software; you can redistribute it and/or modify
@@ -18,42 +18,55 @@
  *
  */
 
+#ifndef SRC_XEN_XENGNTTAB_HPP_
+#define SRC_XEN_XENGNTTAB_HPP_
 
-#ifndef SRC_XEN_XENCTRL_HPP_
-#define SRC_XEN_XENCTRL_HPP_
-
-#include <vector>
+#include <sys/mman.h>
 
 extern "C" {
-#include <xenctrl.h>
+#include <xengnttab.h>
 }
 
 #include "XenException.hpp"
 
 namespace XenBackend {
 
-class XenCtrlException : public XenException
+class XenGnttabException : public XenException
 {
 	using XenException::XenException;
 };
 
-class XenInterface
+class XenGnttab
 {
 public:
-	XenInterface();
-	~XenInterface();
+	XenGnttab();
+	~XenGnttab();
 
-	void getDomainsInfo(std::vector<xc_domaininfo_t>& infos);
+	xengnttab_handle* getHandle() const { return mHandle; }
 
 private:
-	const int cDomInfoChunkSize = 64;
+	xengnttab_handle* mHandle;
+};
 
-	xc_interface* mHandle;
+class XenGnttabBuffer
+{
+public:
+	XenGnttabBuffer(int domId, uint32_t ref, int prot);
+	XenGnttabBuffer(int domId, const uint32_t* refs, size_t count, int prot);
+	~XenGnttabBuffer();
 
-	void init();
+	void* getBuffer() const { return mBuffer; }
+
+private:
+	void* mBuffer;
+	xengnttab_handle* mHandle;
+	size_t mCount;
+	int mDomId;
+
+	void init(const uint32_t* refs, size_t count, int prot);
 	void release();
 };
 
 }
 
-#endif /* SRC_XEN_XENCTRL_HPP_ */
+#endif /* SRC_XEN_XENGNTTAB_HPP_ */

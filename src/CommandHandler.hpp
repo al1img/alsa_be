@@ -26,8 +26,7 @@
 #include <vector>
 
 #include "AlsaPcm.hpp"
-
-#include "XenCtrl.hpp"
+#include "XenGnttab.hpp"
 
 extern "C" {
 #include "sndif_linux.h"
