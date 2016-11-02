@@ -223,20 +223,24 @@ void XenStore::release()
 
 bool XenStore::checkWatches(string& retPath, string& retToken)
 {
+	static bool toCheck = false;
 	int ret = 1;
 
 	do
 	{
-		auto result = xs_check_watch(mXsHandle);
-
-		if (result)
+		if (toCheck)
 		{
-			retPath = result[XS_WATCH_PATH];
-			retToken = result[XS_WATCH_TOKEN];
+			auto result = xs_check_watch(mXsHandle);
 
-			free(result);
+			if (result)
+			{
+				retPath = result[XS_WATCH_PATH];
+				retToken = result[XS_WATCH_TOKEN];
 
-			return true;
+				free(result);
+
+				return true;
+			}
 		}
 
 		pollfd fds = { .fd = xs_fileno(mXsHandle), .events = POLLIN};
@@ -246,6 +250,15 @@ bool XenStore::checkWatches(string& retPath, string& retToken)
 		if (ret < 0)
 		{
 			LOG(ERROR) << "Can't poll watches";
+		}
+
+		if (ret > 0)
+		{
+			toCheck = true;
+		}
+		else
+		{
+			toCheck = false;
 		}
 	}
 	while(ret > 0);
