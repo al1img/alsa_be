@@ -21,6 +21,7 @@
 #include "FrontendHandlerBase.hpp"
 
 #include <algorithm>
+#include <functional>
 #include <sstream>
 
 #include <glog/logging.h>
@@ -34,16 +35,16 @@ extern "C"
 #include "BackendBase.hpp"
 #include "Utils.hpp"
 
+using std::bind;
 using std::exception;
 using std::find;
 using std::lock_guard;
 using std::make_pair;
-using std::mutex;
+using std::placeholders::_1;
 using std::shared_ptr;
 using std::stoi;
 using std::string;
 using std::stringstream;
-using std::thread;
 using std::to_string;
 using std::vector;
 
@@ -53,9 +54,7 @@ FrontendHandlerBase::FrontendHandlerBase(int domId, BackendBase& backend, int id
 	mId(id),
 	mDomId(domId),
 	mBackend(backend),
-	mBackendState(XenbusStateUnknown),
-	mTerminate(false),
-	mTerminated(false)
+	mBackendState(XenbusStateUnknown)
 {
 	mLogId = Utils::logDomId(mDomId, mId) + " - ";
 
@@ -64,74 +63,26 @@ FrontendHandlerBase::FrontendHandlerBase(int domId, BackendBase& backend, int id
 	initXenStorePathes();
 
 	setBackendState(XenbusStateInitialising);
+
+	mXenStore.setWatch(mXsFrontendPath + "/state", bind(&FrontendHandlerBase::frontendStateChanged, this, _1));
 }
 
 FrontendHandlerBase::~FrontendHandlerBase()
 {
 	mChannels.clear();
 
-	stop();
-
 	setBackendState(XenbusStateClosed);
 
 	VLOG(1) << mLogId << "Delete frontend handler";
 }
 
-void FrontendHandlerBase::start()
-{
-	lock_guard<mutex> lock(mMutex);
-
-	VLOG(1) << mLogId << "Start frontend handler";
-
-	mThread = thread(&FrontendHandlerBase::run, this);
-}
-
-void FrontendHandlerBase::stop()
-{
-	VLOG(1) << mLogId << "Stop frontend handler";
-
-	mTerminate = true;
-
-	if (mThread.joinable())
-	{
-		mThread.join();
-	}
-}
-
 void FrontendHandlerBase::addChannel(shared_ptr<DataChannelBase> channel)
 {
-	lock_guard<mutex> lock(mMutex);
-
 	mChannels.insert(make_pair(channel->getName(), channel));
 
 	channel->start();
 
 	LOG(INFO) << mLogId << "Add channel: " << channel->getName();
-}
-
-void FrontendHandlerBase::run()
-{
-	try
-	{
-		mXenStore.setWatch(mXsFrontendPath);
-
-		while(!mTerminate)
-		{
-			monitorFrontendState();
-
-			checkTerminatedChannels();
-		}
-	}
-	catch(const exception& e)
-	{
-		LOG(ERROR) << e.what();
-	}
-
-	mXenStore.clearWatch(mXsFrontendPath);
-
-	setBackendState(XenbusStateClosing);
-
-	mTerminated = true;
 }
 
 void FrontendHandlerBase::initXenStorePathes()
@@ -154,108 +105,77 @@ void FrontendHandlerBase::initXenStorePathes()
 	VLOG(1) << "Backend path:  " << mXsBackendPath;
 }
 
-void FrontendHandlerBase::waitForBackendInitialised()
+xenbus_state FrontendHandlerBase::getBackendState()
 {
-	mXenStore.setWatch(mXsBackendPath);
 
-	LOG(INFO) << mLogId << "Wait for backend initialized";
-
-	while(!mTerminate)
+	for (auto channel : mChannels)
 	{
-		string path, token;
-
-		if (mXenStore.checkWatches(path, token))
+		if (channel.second->isTerminated())
 		{
-			if (static_cast<xenbus_state>(mXenStore.readInt(mXsFrontendPath + "/state")) == XenbusStateInitialising)
-			{
-				break;
-			}
+			setBackendState(XenbusStateClosing);
 		}
 	}
 
-	mXenStore.clearWatch(mXsBackendPath);
+	return mBackendState;
 }
 
-void FrontendHandlerBase::monitorFrontendState()
-{
-	while(!mTerminate)
-	{
-		string path, token;
-
-		if (mXenStore.checkWatches(path, token))
-		{
-			frontendStateChanged(static_cast<xenbus_state>(
-					mXenStore.readInt(mXsFrontendPath + "/state")));
-		}
-	}
-}
-
-void FrontendHandlerBase::checkTerminatedChannels()
-{
-	lock_guard<mutex> lock(mMutex);
-
-	for (auto it = mChannels.begin(); it != mChannels.end();)
-	{
-		if (it->second->isTerminated())
-		{
-			LOG(INFO) << mLogId << "Delete terminated channel: " << it->first;
-
-			it = mChannels.erase(it);
-		}
-		else
-		{
-			++it;
-		}
-	}
-}
-
-void FrontendHandlerBase::frontendStateChanged(xenbus_state state)
+void FrontendHandlerBase::frontendStateChanged(const string& path)
 {
 	static xenbus_state prevState = XenbusStateUnknown;
 
-	if (state == prevState)
+	try
 	{
-		return;
+		auto state = static_cast<xenbus_state>(mXenStore.readInt(mXsFrontendPath + "/state"));
+
+		if (state == prevState)
+		{
+			return;
+		}
+
+		prevState = state;
+
+		LOG(INFO) << mLogId << "Frontend state changed to: " << Utils::logState(state);
+
+		switch(state)
+		{
+		case XenbusStateInitialising:
+
+			if (mBackendState != XenbusStateInitialising)
+			{
+				LOG(WARNING) << mLogId << "Frontend restarted";
+
+				setBackendState(XenbusStateClosing);
+			}
+			else
+			{
+				setBackendState(XenbusStateInitWait);
+			}
+
+			break;
+
+		case XenbusStateInitialised:
+
+			onBind();
+
+			setBackendState(XenbusStateConnected);
+
+			break;
+
+		case XenbusStateClosing:
+		case XenbusStateClosed:
+			setBackendState(XenbusStateClosing);
+
+			break;
+
+		default:
+			break;
+		}
 	}
-
-	prevState = state;
-
-	LOG(INFO) << mLogId << "Frontend state changed to: " << Utils::logState(state);
-
-	switch(state)
+	catch(const exception& e)
 	{
-	case XenbusStateInitialising:
+		LOG(ERROR) << mLogId << e.what();
 
-		if (mBackendState != XenbusStateInitialising)
-		{
-			LOG(WARNING) << mLogId << "Frontend restarted";
-
-			mTerminate = true;
-		}
-		else
-		{
-			setBackendState(XenbusStateInitWait);
-		}
-
-		break;
-
-	case XenbusStateInitialised:
-
-		onBind();
-
-		setBackendState(XenbusStateConnected);
-
-		break;
-
-	case XenbusStateClosing:
-	case XenbusStateClosed:
-
-		mTerminate = true;
-
-		break;
-
-	default:
-		break;
+		setBackendState(XenbusStateClosing);
 	}
 }
 

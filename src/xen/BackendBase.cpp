@@ -87,8 +87,6 @@ void BackendBase::addFrontendHandler(shared_ptr<FrontendHandlerBase> frontendHan
 	pair<int, int> ids(make_pair(frontendHandler->getDomId(), frontendHandler->getId()));
 
 	mFrontendHandlers.insert(make_pair(ids, frontendHandler));
-
-	mFrontendHandlers[ids]->start();
 }
 
 bool BackendBase::getNewFrontend(int& domId, int& id)
@@ -138,7 +136,7 @@ void BackendBase::checkTerminatedFrontends()
 {
 	for (auto it = mFrontendHandlers.begin(); it != mFrontendHandlers.end();)
 	{
-		if (it->second->isTerminated())
+		if (it->second->getBackendState() == XenbusStateClosing)
 		{
 			LOG(INFO) << "Delete terminated frontend: " << Utils::logDomId(it->first.first, it->first.second);
 

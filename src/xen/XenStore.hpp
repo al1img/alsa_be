@@ -21,7 +21,12 @@
 #ifndef INCLUDE_XENSTORE_HPP_
 #define INCLUDE_XENSTORE_HPP_
 
+#include <atomic>
+#include <functional>
+#include <map>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 extern "C" {
@@ -50,9 +55,8 @@ public:
 	void removePath(const std::string& path);
 	bool checkIfExist(const std::string& path);
 
-	void setWatch(const std::string& path);
+	void setWatch(const std::string& path, std::function<void(const std::string& path)> callback);
 	void clearWatch(const std::string& path);
-	bool checkWatches(std::string& retPath, std::string& retToken);
 	const std::vector<std::string> readDirectory(const std::string& path);
 
 private:
@@ -60,8 +64,19 @@ private:
 
 	xs_handle*	mXsHandle;
 
+	std::map<std::string, std::function<void(const std::string&)>> mWatches;
+
+	std::thread mThread;
+	std::mutex mMutex;
+	std::mutex mItfMutex;
+
 	void init();
 	void release();
+
+	bool checkWatches(std::string& retPath, std::string& retToken);
+	void handleWatches();
+	void clearWatches();
+	void waitHandlerFinished();
 };
 
 }

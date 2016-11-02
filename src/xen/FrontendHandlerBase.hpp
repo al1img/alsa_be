@@ -53,14 +53,12 @@ public:
 	FrontendHandlerBase(int domId, BackendBase& backend, int id = 0);
 	virtual ~FrontendHandlerBase();
 
-	void start();
-	void stop();
+	int getDomId() const { return mDomId; }
+	int getId() const {  return mId; }
+	const std::string& getXsFrontendPath() const { return mXsFrontendPath; }
+	XenStore& getXenStore() {  return mXenStore; }
 
-	int getDomId() const { std::lock_guard<std::mutex> lock(mMutex); return mDomId; }
-	int getId() const { std::lock_guard<std::mutex> lock(mMutex); return mId; }
-	const std::string& getXsFrontendPath() const { std::lock_guard<std::mutex> lock(mMutex); return mXsFrontendPath; }
-	XenStore& getXenStore() { std::lock_guard<std::mutex> lock(mMutex); return mXenStore; }
-	bool isTerminated() const { return mTerminated; }
+	xenbus_state getBackendState();
 
 protected:
 	virtual void onBind() = 0;
@@ -81,21 +79,13 @@ private:
 
 	std::map<std::string, std::shared_ptr<DataChannelBase>> mChannels;
 
-	std::thread mThread;
-	mutable std::mutex mMutex;
-	std::atomic_bool mTerminate;
-	std::atomic_bool mTerminated;
-
 	std::string mLogId;
 
 	void run();
 
 	void initXenStorePathes();
-	void waitForBackendInitialised();
-	void monitorFrontendState();
 	void checkTerminatedChannels();
-	void frontendStateChanged(xenbus_state state);
-
+	void frontendStateChanged(const std::string& path);
 	void setBackendState(xenbus_state state);
 };
 
