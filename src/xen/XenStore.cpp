@@ -24,7 +24,6 @@
 #include <glog/logging.h>
 
 using std::exception;
-using std::function;
 using std::lock_guard;
 using std::mutex;
 using std::string;
@@ -126,7 +125,46 @@ void XenStore::removePath(const string& path)
 	}
 }
 
-void XenStore::setWatch(const string& path, function<void(const string& path)> callback, bool initNotify)
+vector<string> XenStore::readDirectory(const string& path)
+{
+	unsigned int num;
+	auto items = xs_directory(mXsHandle, XBT_NULL, path.c_str(), &num);
+
+	if (items && num)
+	{
+		vector<string> result;
+
+		result.reserve(num);
+
+		for(auto i = 0; i < num; i++)
+		{
+			result.push_back(items[i]);
+		}
+
+		free(items);
+
+		return result;
+	}
+
+	return vector<string>();
+}
+
+bool XenStore::checkIfExist(const string& path)
+{
+	unsigned length;
+	auto pData = xs_read(mXsHandle, XBT_NULL, path.c_str(), &length);
+
+	if (!pData)
+	{
+		return false;
+	}
+
+	free(pData);
+
+	return true;
+}
+
+void XenStore::setWatch(const string& path, WatchCallback callback, bool initNotify)
 {
 	lock_guard<mutex> itfLock(mItfMutex);
 
@@ -168,43 +206,11 @@ void XenStore::clearWatch(const string& path)
 	}
 }
 
-const vector<string> XenStore::readDirectory(const string& path)
+void XenStore::setWatchErrorCallback(WatchErrorCallback errorCallback)
 {
-	unsigned int num;
-	auto items = xs_directory(mXsHandle, XBT_NULL, path.c_str(), &num);
+	lock_guard<mutex> lock(mMutex);
 
-	if (items && num)
-	{
-		vector<string> result;
-
-		result.reserve(num);
-
-		for(auto i = 0; i < num; i++)
-		{
-			result.push_back(items[i]);
-		}
-
-		free(items);
-
-		return result;
-	}
-
-	return vector<string>();
-}
-
-bool XenStore::checkIfExist(const string& path)
-{
-	unsigned length;
-	auto pData = xs_read(mXsHandle, XBT_NULL, path.c_str(), &length);
-
-	if (!pData)
-	{
-		return false;
-	}
-
-	free(pData);
-
-	return true;
+	mErrorCallback = errorCallback;
 }
 
 void XenStore::init()
@@ -309,7 +315,16 @@ void XenStore::watchesThread()
 	}
 	catch(const exception& e)
 	{
-		LOG(ERROR) << e.what();
+		auto errorCbk = getWatchErrorCallback();
+
+		if (errorCbk)
+		{
+			errorCbk(e);
+		}
+		else
+		{
+			LOG(ERROR) << e.what();
+		}
 	}
 }
 
@@ -326,11 +341,11 @@ string XenStore::getInitNotifyPath()
 	return path;
 }
 
-function<void(const string&)> XenStore::getWatchCallback(string& path)
+XenStore::WatchCallback XenStore::getWatchCallback(string& path)
 {
 	lock_guard<mutex> lock(mMutex);
 
-	function<void(const string&)> callback = nullptr;
+	WatchCallback callback = nullptr;
 
 	auto result = mWatches.find(path);
 	if (result != mWatches.end())
@@ -341,6 +356,13 @@ function<void(const string&)> XenStore::getWatchCallback(string& path)
 	}
 
 	return callback;
+}
+
+XenStore::WatchErrorCallback XenStore::getWatchErrorCallback()
+{
+	lock_guard<mutex> lock(mMutex);
+
+	return mErrorCallback;
 }
 
 bool XenStore::isWatchesEmpty()

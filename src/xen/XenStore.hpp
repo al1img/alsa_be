@@ -46,6 +46,9 @@ class XenStoreException : public XenException
 class XenStore
 {
 public:
+	typedef std::function<void(const std::string& path)> WatchCallback;
+	typedef std::function<void(const std::exception&)> WatchErrorCallback;
+
 	XenStore();
 	~XenStore();
 
@@ -55,17 +58,20 @@ public:
 	void writeInt(const std::string& path, int value);
 	void removePath(const std::string& path);
 	bool checkIfExist(const std::string& path);
+	std::vector<std::string> readDirectory(const std::string& path);
 
-	void setWatch(const std::string& path, std::function<void(const std::string& path)> callback, bool initNotify = false);
+	void setWatch(const std::string& path, WatchCallback callback, bool initNotify = false);
 	void clearWatch(const std::string& path);
-	const std::vector<std::string> readDirectory(const std::string& path);
+	void setWatchErrorCallback(WatchErrorCallback errorCallback);
 
 private:
 	const int cPollWatchesTimeoutMs = 100;
 
+	std::function<void(const std::exception&)> mErrorCallback;
+
 	xs_handle*	mXsHandle;
 
-	std::map<std::string, std::function<void(const std::string&)>> mWatches;
+	std::map<std::string, WatchCallback> mWatches;
 	std::list<std::string> mInitNotifyWatches;
 
 	std::thread mThread;
@@ -77,13 +83,13 @@ private:
 	void release();
 
 	void watchesThread();
-
+	bool isWatchesEmpty();
 	std::string checkWatches();
 	std::string checkXsWatch();
 	bool pollXsWatchFd();
 	std::string getInitNotifyPath();
-	std::function<void(const std::string&)> getWatchCallback(std::string& path);
-	bool isWatchesEmpty();
+	WatchCallback getWatchCallback(std::string& path);
+	WatchErrorCallback getWatchErrorCallback();
 	void clearWatches();
 	void waitWatchesThreadFinished();
 };

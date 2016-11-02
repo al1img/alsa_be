@@ -26,10 +26,9 @@
 
 #include <glog/logging.h>
 
-extern "C"
-{
-	#include "xenstore.h"
-	#include "xenctrl.h"
+extern "C" {
+#include "xenstore.h"
+#include "xenctrl.h"
 }
 
 #include "BackendBase.hpp"
@@ -65,6 +64,8 @@ FrontendHandlerBase::FrontendHandlerBase(int domId, BackendBase& backend, int id
 	initXenStorePathes();
 
 	setBackendState(XenbusStateInitialising);
+
+	mXenStore.setWatchErrorCallback(bind(&FrontendHandlerBase::onXenStoreError, this, _1));
 
 	mXenStore.setWatch(mXsFrontendPath + "/state", bind(&FrontendHandlerBase::frontendPathChanged, this, _1), true);
 }
@@ -192,6 +193,13 @@ void FrontendHandlerBase::frontendStateChanged(xenbus_state state)
 	default:
 		break;
 	}
+}
+
+void FrontendHandlerBase::onXenStoreError(const std::exception& e)
+{
+	LOG(ERROR) << mLogId << e.what();
+
+	setBackendState(XenbusStateClosing);
 }
 
 void FrontendHandlerBase::setBackendState(xenbus_state state)

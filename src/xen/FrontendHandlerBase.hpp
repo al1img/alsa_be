@@ -90,6 +90,7 @@ private:
 	void checkTerminatedChannels();
 	void frontendPathChanged(const std::string& path);
 	void frontendStateChanged(xenbus_state state);
+	void onXenStoreError(const std::exception& e);
 	void setBackendState(xenbus_state state);
 };
 
