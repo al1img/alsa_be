@@ -51,9 +51,9 @@ class RingBufferBase : public RingBufferItf
 {
 public:
 	RingBufferBase(int domId, int ref, int pageSize) :
-		mGnttab(domId, ref, PROT_READ | PROT_WRITE)
+		mBuffer(domId, ref, PROT_READ | PROT_WRITE)
 	{
-		BACK_RING_INIT(&mRing, static_cast<SRing*>(mGnttab.getBuffer()), pageSize);
+		BACK_RING_INIT(&mRing, static_cast<SRing*>(mBuffer.get()), pageSize);
 	}
 
 protected:
@@ -77,7 +77,7 @@ protected:
 
 private:
 	Ring mRing;
-	XenGnttabBuffer mGnttab;
+	XenGnttabBuffer mBuffer;
 	std::function<void()> mNotifyEventChannelCbk;
 
 	void setNotifyEventChannelCbk(std::function<void()> cbk)

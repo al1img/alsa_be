@@ -41,6 +41,8 @@ class XenInterface
 {
 public:
 	XenInterface();
+	XenInterface(const XenInterface&) = delete;
+	XenInterface& operator=(XenInterface const&) = delete;
 	~XenInterface();
 
 	void getDomainsInfo(std::vector<xc_domaininfo_t>& infos);

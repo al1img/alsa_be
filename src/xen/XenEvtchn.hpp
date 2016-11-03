@@ -38,6 +38,8 @@ class XenEvtchn
 {
 public:
 	XenEvtchn(int domId, int port);
+	XenEvtchn(const XenEvtchn&) = delete;
+	XenEvtchn& operator=(XenEvtchn const&) = delete;
 	~XenEvtchn();
 
 	bool waitEvent();

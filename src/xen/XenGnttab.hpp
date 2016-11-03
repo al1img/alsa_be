@@ -38,13 +38,16 @@ class XenGnttabException : public XenException
 
 class XenGnttab
 {
-public:
+private:
+	friend class XenGnttabBuffer;
+
 	XenGnttab();
+	XenGnttab(const XenGnttab&) = delete;
+	XenGnttab& operator=(XenGnttab const&) = delete;
 	~XenGnttab();
 
 	xengnttab_handle* getHandle() const { return mHandle; }
 
-private:
 	xengnttab_handle* mHandle;
 };
 
@@ -53,9 +56,11 @@ class XenGnttabBuffer
 public:
 	XenGnttabBuffer(int domId, uint32_t ref, int prot);
 	XenGnttabBuffer(int domId, const uint32_t* refs, size_t count, int prot);
+	XenGnttabBuffer(const XenGnttabBuffer&) = delete;
+	XenGnttabBuffer& operator=(XenGnttabBuffer const&) = delete;
 	~XenGnttabBuffer();
 
-	void* getBuffer() const { return mBuffer; }
+	void* get() const { return mBuffer; }
 
 private:
 	void* mBuffer;

@@ -24,6 +24,8 @@
 
 #include <glog/logging.h>
 
+using std::vector;
+
 using XenBackend::XenException;
 using XenBackend::XenGnttabBuffer;
 
@@ -105,16 +107,20 @@ void CommandHandler::open(const xensnd_req& req)
 
 	const xensnd_open_req& openReq = req.u.data.op.open;
 
-	mGnttab.reset(new XenGnttabBuffer(mDomId, openReq.grefs, XENSND_MAX_PAGES_PER_REQUEST, PROT_READ | PROT_WRITE));
+	vector<grant_ref_t> refs;
 
-	mAlsaPcm.open(AlsaPcmParams(convertPcmFormat(openReq.format), openReq.rate, openReq.channels));
+	getBufferRefs(openReq.gref_directory_start, refs);
+
+	mBuffer.reset(new XenGnttabBuffer(mDomId, refs.data(), refs.size(), PROT_READ | PROT_WRITE));
+
+	mAlsaPcm.open(AlsaPcmParams(convertPcmFormat(openReq.pcm_format), openReq.pcm_rate, openReq.pcm_channels));
 }
 
 void CommandHandler::close(const xensnd_req& req)
 {
 	DVLOG(2) << "Handle command [CLOSE]";
 
-	mGnttab.reset();
+	mBuffer.reset();
 
 	mAlsaPcm.close();
 }
@@ -125,7 +131,7 @@ void CommandHandler::read(const xensnd_req& req)
 
 	const xensnd_read_req& readReq = req.u.data.op.read;
 
-	mAlsaPcm.read(&(static_cast<uint8_t*>(mGnttab->getBuffer())[readReq.offset]), readReq.len);
+	mAlsaPcm.read(&(static_cast<uint8_t*>(mBuffer->get())[readReq.offset]), readReq.len);
 }
 
 void CommandHandler::write(const xensnd_req& req)
@@ -134,7 +140,29 @@ void CommandHandler::write(const xensnd_req& req)
 
 	const xensnd_write_req& writeReq = req.u.data.op.write;
 
-	mAlsaPcm.write(&(static_cast<uint8_t*>(mGnttab->getBuffer())[writeReq.offset]), writeReq.len);
+	mAlsaPcm.write(&(static_cast<uint8_t*>(mBuffer->get())[writeReq.offset]), writeReq.len);
+}
+
+void CommandHandler::getBufferRefs(grant_ref_t startDirectory, vector<grant_ref_t>& refs)
+{
+	refs.clear();
+
+	do
+	{
+
+		XenGnttabBuffer pageBuffer(mDomId, startDirectory, PROT_READ | PROT_WRITE);
+		xensnd_page_directory* pageDirectory = static_cast<xensnd_page_directory*>(pageBuffer.get());
+
+		DVLOG(2) << "Get buffer refs, directory: " << startDirectory << ", num refs: " << pageDirectory->num_grefs;
+
+		refs.insert(refs.end(), pageDirectory->gref, pageDirectory->gref + pageDirectory->num_grefs);
+
+		startDirectory = pageDirectory->gref_dir_next_page;
+
+	}
+	while(startDirectory != 0);
+
+	DVLOG(2) << "Get buffer refs, num refs: " << refs.size();
 }
 
 snd_pcm_format_t CommandHandler::convertPcmFormat(uint8_t format)

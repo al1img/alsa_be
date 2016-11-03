@@ -50,7 +50,7 @@ private:
 	static PcmFormat sPcmFormat[];
 
 	int mDomId;
-	std::unique_ptr<XenBackend::XenGnttabBuffer> mGnttab;
+	std::unique_ptr<XenBackend::XenGnttabBuffer> mBuffer;
 
 	Alsa::AlsaPcm mAlsaPcm;
 
@@ -63,6 +63,7 @@ private:
 	void read(const xensnd_req& req);
 	void write(const xensnd_req& req);
 
+	void getBufferRefs(grant_ref_t startDirectory, std::vector<grant_ref_t>& refs);
 	snd_pcm_format_t convertPcmFormat(uint8_t format);
 };
 

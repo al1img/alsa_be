@@ -50,6 +50,8 @@ public:
 	typedef std::function<void(const std::exception&)> WatchErrorCallback;
 
 	XenStore();
+	XenStore(const XenStore&) = delete;
+	XenStore& operator=(XenStore const&) = delete;
 	~XenStore();
 
 	std::string getDomainPath(int domId);
