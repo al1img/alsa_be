@@ -37,6 +37,10 @@ using std::vector;
 
 namespace XenBackend {
 
+/***************************************************************************//**
+ * c'tor & d'tor
+ ******************************************************************************/
+
 BackendBase::BackendBase(int domId, const string& deviceName, int id) :
 	mId(id),
 	mDomId(domId),
@@ -47,7 +51,6 @@ BackendBase::BackendBase(int domId, const string& deviceName, int id) :
 	mLog("Backend")
 {
 	LOG(mLog, DEBUG) << "Create backend: " << deviceName << ", " << id;
-
 }
 
 BackendBase::~BackendBase()
@@ -56,6 +59,10 @@ BackendBase::~BackendBase()
 
 	LOG(mLog, DEBUG) << "Delete backend: " << mDeviceName << ", " << mId;
 }
+
+/***************************************************************************//**
+ * Public
+ ******************************************************************************/
 
 void BackendBase::run()
 {
@@ -81,9 +88,15 @@ void BackendBase::stop()
 	mTerminate = true;
 }
 
-void BackendBase::addFrontendHandler(shared_ptr<FrontendHandlerBase> frontendHandler)
+/***************************************************************************//**
+ * Protected
+ ******************************************************************************/
+
+void BackendBase::addFrontendHandler(shared_ptr<FrontendHandlerBase>
+									 frontendHandler)
 {
-	pair<int, int> ids(make_pair(frontendHandler->getDomId(), frontendHandler->getId()));
+	pair<int, int> ids(make_pair(frontendHandler->getDomId(),
+					   frontendHandler->getId()));
 
 	mFrontendHandlers.insert(make_pair(ids, frontendHandler));
 }
@@ -97,13 +110,15 @@ bool BackendBase::getNewFrontend(int& domId, int& id)
 			continue;
 		}
 
-		string basePath = mXenStore.getDomainPath(dom) + "/device/" + mDeviceName;
+		string basePath = mXenStore.getDomainPath(dom) +
+						  "/device/" + mDeviceName;
 
 		for (string strInstance : mXenStore.readDirectory(basePath))
 		{
 			auto instance = stoi(strInstance);
 
-			if (mFrontendHandlers.find(make_pair(dom, instance)) == mFrontendHandlers.end())
+			if (mFrontendHandlers.find(make_pair(dom, instance)) ==
+				mFrontendHandlers.end())
 			{
 				string statePath = basePath + "/" + strInstance + "/state";
 
@@ -121,13 +136,24 @@ bool BackendBase::getNewFrontend(int& domId, int& id)
 	return false;
 }
 
+/***************************************************************************//**
+ * Private
+ ******************************************************************************/
+
 void BackendBase::createFrontendHandler(const std::pair<int, int>& ids)
 {
-	if ((ids.first > 0) && (mFrontendHandlers.find(ids) == mFrontendHandlers.end()))
+	if ((ids.first > 0) &&
+		(mFrontendHandlers.find(ids) == mFrontendHandlers.end()))
 	{
-		LOG(mLog, INFO) << "Create new frontend: " << Utils::logDomId(ids.first, ids.second);
+		LOG(mLog, INFO) << "Create new frontend: "
+						<< Utils::logDomId(ids.first, ids.second);
 
 		onNewFrontend(ids.first, ids.second);
+	}
+	else
+	{
+		LOG(mLog, WARNING) << "Domain already exists: "
+						   << Utils::logDomId(ids.first, ids.second);
 	}
 }
 
@@ -137,7 +163,9 @@ void BackendBase::checkTerminatedFrontends()
 	{
 		if (it->second->getBackendState() == XenbusStateClosing)
 		{
-			LOG(mLog, INFO) << "Delete terminated frontend: " << Utils::logDomId(it->first.first, it->first.second);
+			LOG(mLog, INFO) << "Delete terminated frontend: "
+							<< Utils::logDomId(it->first.first,
+											   it->first.second);
 
 			it = mFrontendHandlers.erase(it);
 		}
