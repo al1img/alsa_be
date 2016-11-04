@@ -30,6 +30,7 @@
 #include "RingBufferBase.hpp"
 #include "XenException.hpp"
 #include "XenEvtchn.hpp"
+#include "Log.hpp"
 
 namespace XenBackend {
 
@@ -64,6 +65,8 @@ private:
 	mutable std::mutex mMutex;
 	std::atomic_bool mTerminate;
 	std::atomic_bool mTerminated;
+
+	Log mLog;
 
 	void run();
 };

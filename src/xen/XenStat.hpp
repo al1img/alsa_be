@@ -25,6 +25,7 @@
 
 #include "XenCtrl.hpp"
 #include "XenException.hpp"
+#include "Log.hpp"
 
 namespace XenBackend {
 
@@ -44,6 +45,7 @@ public:
 
 private:
 	XenInterface mInterface;
+	Log mLog;
 };
 
 }

@@ -25,6 +25,7 @@
 #include "CommandHandler.hpp"
 #include "FrontendHandlerBase.hpp"
 #include "RingBufferBase.hpp"
+#include "Log.hpp"
 
 extern "C" {
 #include "sndif_linux.h"
@@ -44,15 +45,23 @@ public:
 private:
 	int mId;
 	CommandHandler mCommandHandler;
+	XenBackend::Log mLog;
 
 	void processRequest(const xensnd_req& req);
 };
 
 class AlsaFrontendHandler : public XenBackend::FrontendHandlerBase
 {
-	using XenBackend::FrontendHandlerBase::FrontendHandlerBase;
+public:
 
-private:
+	AlsaFrontendHandler(int domId, XenBackend::BackendBase& backend, int id) :
+		FrontendHandlerBase(domId, backend, id),
+		mLog("AlsaFrontend") {}
+
+private
+:
+	XenBackend::Log mLog;
+
 	void onBind();
 
 	void createStreamChannel(int id, Alsa::StreamType type, const std::string& streamPath);

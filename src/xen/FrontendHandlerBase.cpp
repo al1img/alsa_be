@@ -24,8 +24,6 @@
 #include <functional>
 #include <sstream>
 
-#include <glog/logging.h>
-
 extern "C" {
 #include "xenstore.h"
 #include "xenctrl.h"
@@ -55,11 +53,12 @@ FrontendHandlerBase::FrontendHandlerBase(int domId, BackendBase& backend, int id
 	mBackend(backend),
 	mBackendState(XenbusStateUnknown),
 	mFrontendState(XenbusStateUnknown),
-	mWaitForFrontendInitialising(true)
+	mWaitForFrontendInitialising(true),
+	mLog("Frontend")
 {
 	mLogId = Utils::logDomId(mDomId, mId) + " - ";
 
-	VLOG(1) << mLogId << "Create frontend handler";
+	LOG(mLog, DEBUG) << mLogId << "Create frontend handler";
 
 	initXenStorePathes();
 
@@ -76,7 +75,7 @@ FrontendHandlerBase::~FrontendHandlerBase()
 
 	setBackendState(XenbusStateClosed);
 
-	VLOG(1) << mLogId << "Delete frontend handler";
+	LOG(mLog, DEBUG) << mLogId << "Delete frontend handler";
 }
 
 void FrontendHandlerBase::addChannel(shared_ptr<DataChannelBase> channel)
@@ -85,7 +84,7 @@ void FrontendHandlerBase::addChannel(shared_ptr<DataChannelBase> channel)
 
 	channel->start();
 
-	LOG(INFO) << mLogId << "Add channel: " << channel->getName();
+	LOG(mLog, INFO) << mLogId << "Add channel: " << channel->getName();
 }
 
 void FrontendHandlerBase::initXenStorePathes()
@@ -104,8 +103,8 @@ void FrontendHandlerBase::initXenStorePathes()
 
 	mXsBackendPath = ss.str();
 
-	VLOG(1) << "Frontend path: " << mXsFrontendPath;
-	VLOG(1) << "Backend path:  " << mXsBackendPath;
+	LOG(mLog, DEBUG) << "Frontend path: " << mXsFrontendPath;
+	LOG(mLog, DEBUG) << "Backend path:  " << mXsBackendPath;
 }
 
 xenbus_state FrontendHandlerBase::getBackendState()
@@ -136,7 +135,7 @@ void FrontendHandlerBase::frontendPathChanged(const string& path)
 
 		if (mWaitForFrontendInitialising && state != XenbusStateInitialising)
 		{
-			LOG(INFO) << mLogId << "Wait for frontend initialising";
+			LOG(mLog, INFO) << mLogId << "Wait for frontend initialising";
 
 			return;
 		}
@@ -147,7 +146,7 @@ void FrontendHandlerBase::frontendPathChanged(const string& path)
 	}
 	catch(const exception& e)
 	{
-		LOG(ERROR) << mLogId << e.what();
+		LOG(mLog, ERROR) << mLogId << e.what();
 
 		setBackendState(XenbusStateClosing);
 	}
@@ -155,7 +154,7 @@ void FrontendHandlerBase::frontendPathChanged(const string& path)
 
 void FrontendHandlerBase::frontendStateChanged(xenbus_state state)
 {
-	LOG(INFO) << mLogId << "Frontend state changed to: " << Utils::logState(state);
+	LOG(mLog, INFO) << mLogId << "Frontend state changed to: " << Utils::logState(state);
 
 	switch(state)
 	{
@@ -164,7 +163,7 @@ void FrontendHandlerBase::frontendStateChanged(xenbus_state state)
 		if (mBackendState != XenbusStateInitialising &&
 			mBackendState != XenbusStateInitWait)
 		{
-			LOG(WARNING) << mLogId << "Frontend restarted";
+			LOG(mLog, WARNING) << mLogId << "Frontend restarted";
 
 			setBackendState(XenbusStateClosing);
 		}
@@ -197,14 +196,14 @@ void FrontendHandlerBase::frontendStateChanged(xenbus_state state)
 
 void FrontendHandlerBase::onXenStoreError(const std::exception& e)
 {
-	LOG(ERROR) << mLogId << e.what();
+	LOG(mLog, ERROR) << mLogId << e.what();
 
 	setBackendState(XenbusStateClosing);
 }
 
 void FrontendHandlerBase::setBackendState(xenbus_state state)
 {
-	LOG(INFO) << mLogId << "Set backend state to: " << Utils::logState(state);
+	LOG(mLog, INFO) << mLogId << "Set backend state to: " << Utils::logState(state);
 
 	auto path = mXsBackendPath + "/state";
 

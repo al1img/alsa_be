@@ -12,6 +12,8 @@
 
 #include <alsa/asoundlib.h>
 
+#include "Log.hpp"
+
 namespace Alsa {
 
 enum class StreamType {PLAYBACK, CAPTURE};
@@ -53,6 +55,7 @@ private:
 	snd_pcm_t *mHandle;
 	std::string mName;
 	StreamType mType;
+	XenBackend::Log mLog;
 
 	void showCardInfo(int card);
 	void showPcmDevicesInfo(snd_ctl_t* handle);

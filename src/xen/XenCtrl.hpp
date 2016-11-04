@@ -29,6 +29,7 @@ extern "C" {
 }
 
 #include "XenException.hpp"
+#include "Log.hpp"
 
 namespace XenBackend {
 
@@ -51,6 +52,8 @@ private:
 	const int cDomInfoChunkSize = 64;
 
 	xc_interface* mHandle;
+
+	Log mLog;
 
 	void init();
 	void release();

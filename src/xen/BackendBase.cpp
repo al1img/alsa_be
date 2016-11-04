@@ -23,8 +23,6 @@
 #include <chrono>
 #include <thread>
 
-#include <glog/logging.h>
-
 #include "Utils.hpp"
 
 using std::chrono::milliseconds;
@@ -45,9 +43,10 @@ BackendBase::BackendBase(int domId, const string& deviceName, int id) :
 	mDeviceName(deviceName),
 	mTerminate(false),
 	mXenStore(),
-	mXenStat()
+	mXenStat(),
+	mLog("Backend")
 {
-	VLOG(1) << "Create backend: " << deviceName << ", " << id;
+	LOG(mLog, DEBUG) << "Create backend: " << deviceName << ", " << id;
 
 }
 
@@ -55,12 +54,12 @@ BackendBase::~BackendBase()
 {
 	mFrontendHandlers.clear();
 
-	VLOG(1) << "Delete backend: " << mDeviceName << ", " << mId;
+	LOG(mLog, DEBUG) << "Delete backend: " << mDeviceName << ", " << mId;
 }
 
 void BackendBase::run()
 {
-	LOG(INFO) << "Wait for frontend";
+	LOG(mLog, INFO) << "Wait for frontend";
 
 	while(!mTerminate)
 	{
@@ -126,7 +125,7 @@ void BackendBase::createFrontendHandler(const std::pair<int, int>& ids)
 {
 	if ((ids.first > 0) && (mFrontendHandlers.find(ids) == mFrontendHandlers.end()))
 	{
-		LOG(INFO) << "Create new frontend: " << Utils::logDomId(ids.first, ids.second);
+		LOG(mLog, INFO) << "Create new frontend: " << Utils::logDomId(ids.first, ids.second);
 
 		onNewFrontend(ids.first, ids.second);
 	}
@@ -138,7 +137,7 @@ void BackendBase::checkTerminatedFrontends()
 	{
 		if (it->second->getBackendState() == XenbusStateClosing)
 		{
-			LOG(INFO) << "Delete terminated frontend: " << Utils::logDomId(it->first.first, it->first.second);
+			LOG(mLog, INFO) << "Delete terminated frontend: " << Utils::logDomId(it->first.first, it->first.second);
 
 			it = mFrontendHandlers.erase(it);
 		}

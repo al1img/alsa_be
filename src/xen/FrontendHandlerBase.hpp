@@ -36,6 +36,7 @@ extern "C" {
 #include "DataChannelBase.hpp"
 #include "XenException.hpp"
 #include "XenStore.hpp"
+#include "Log.hpp"
 
 namespace XenBackend {
 
@@ -83,6 +84,8 @@ private:
 	bool mWaitForFrontendInitialising;
 
 	std::string mLogId;
+
+	Log mLog;
 
 	void run();
 

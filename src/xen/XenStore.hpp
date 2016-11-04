@@ -35,6 +35,7 @@ extern "C" {
 }
 
 #include "XenException.hpp"
+#include "Log.hpp"
 
 namespace XenBackend {
 
@@ -80,6 +81,7 @@ private:
 	std::mutex mMutex;
 	std::mutex mItfMutex;
 	bool mCheckWatchResult;
+	Log mLog;
 
 	void init();
 	void release();

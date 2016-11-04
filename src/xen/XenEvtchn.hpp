@@ -26,6 +26,7 @@ extern "C" {
 }
 
 #include "XenException.hpp"
+#include "Log.hpp"
 
 namespace XenBackend {
 
@@ -50,6 +51,7 @@ private:
 
 	xenevtchn_handle *mHandle;
 	int mPort;
+	Log mLog;
 
 	void init(int domId, int port);
 	void release();

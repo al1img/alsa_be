@@ -22,8 +22,6 @@
 
 #include <sys/mman.h>
 
-#include <glog/logging.h>
-
 using std::vector;
 
 using XenBackend::XenException;
@@ -64,14 +62,15 @@ CommandHandler::PcmFormat CommandHandler::sPcmFormat[] = {
 CommandHandler::CommandHandler(Alsa::StreamType type, int domId) :
 	mDomId(domId),
 	mAlsaPcm(type),
-	mCmdTable{&CommandHandler::open, &CommandHandler::close, &CommandHandler::read, &CommandHandler::write}
+	mCmdTable{&CommandHandler::open, &CommandHandler::close, &CommandHandler::read, &CommandHandler::write},
+	mLog("CommandHandler")
 {
-	VLOG(1) << "Create command handler, dom: " << mDomId;
+	LOG(mLog, DEBUG) << "Create command handler, dom: " << mDomId;
 }
 
 CommandHandler::~CommandHandler()
 {
-	VLOG(1) << "Delete command handler, dom: " << mDomId;
+	LOG(mLog, DEBUG) << "Delete command handler, dom: " << mDomId;
 }
 
 uint8_t CommandHandler::processCommand(const xensnd_req& req)
@@ -91,19 +90,19 @@ uint8_t CommandHandler::processCommand(const xensnd_req& req)
 	}
 	catch(const AlsaPcmException& e)
 	{
-		LOG(ERROR) << e.what();
+		LOG(mLog, ERROR) << e.what();
 
 		status = XENSND_RSP_ERROR;
 	}
 
-	DVLOG(2) << "Return status: [" << static_cast<int>(status) << "]";
+	DLOG(mLog, DEBUG) << "Return status: [" << static_cast<int>(status) << "]";
 
 	return status;
 }
 
 void CommandHandler::open(const xensnd_req& req)
 {
-	DVLOG(2) << "Handle command [OPEN]";
+	DLOG(mLog, DEBUG) << "Handle command [OPEN]";
 
 	const xensnd_open_req& openReq = req.u.data.op.open;
 
@@ -118,7 +117,7 @@ void CommandHandler::open(const xensnd_req& req)
 
 void CommandHandler::close(const xensnd_req& req)
 {
-	DVLOG(2) << "Handle command [CLOSE]";
+	DLOG(mLog, DEBUG) << "Handle command [CLOSE]";
 
 	mBuffer.reset();
 
@@ -127,7 +126,7 @@ void CommandHandler::close(const xensnd_req& req)
 
 void CommandHandler::read(const xensnd_req& req)
 {
-	DVLOG(2) << "Handle command [READ]";
+	DLOG(mLog, DEBUG) << "Handle command [READ]";
 
 	const xensnd_read_req& readReq = req.u.data.op.read;
 
@@ -136,7 +135,7 @@ void CommandHandler::read(const xensnd_req& req)
 
 void CommandHandler::write(const xensnd_req& req)
 {
-	DVLOG(2) << "Handle command [WRITE]";
+	DLOG(mLog, DEBUG) << "Handle command [WRITE]";
 
 	const xensnd_write_req& writeReq = req.u.data.op.write;
 
@@ -153,7 +152,7 @@ void CommandHandler::getBufferRefs(grant_ref_t startDirectory, vector<grant_ref_
 		XenGnttabBuffer pageBuffer(mDomId, startDirectory, PROT_READ | PROT_WRITE);
 		xensnd_page_directory* pageDirectory = static_cast<xensnd_page_directory*>(pageBuffer.get());
 
-		DVLOG(2) << "Get buffer refs, directory: " << startDirectory << ", num refs: " << pageDirectory->num_grefs;
+		DLOG(mLog, DEBUG) << "Get buffer refs, directory: " << startDirectory << ", num refs: " << pageDirectory->num_grefs;
 
 		refs.insert(refs.end(), pageDirectory->gref, pageDirectory->gref + pageDirectory->num_grefs);
 
@@ -162,7 +161,7 @@ void CommandHandler::getBufferRefs(grant_ref_t startDirectory, vector<grant_ref_
 	}
 	while(startDirectory != 0);
 
-	DVLOG(2) << "Get buffer refs, num refs: " << refs.size();
+	DLOG(mLog, DEBUG) << "Get buffer refs, num refs: " << refs.size();
 }
 
 snd_pcm_format_t CommandHandler::convertPcmFormat(uint8_t format)

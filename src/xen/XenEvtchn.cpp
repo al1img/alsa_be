@@ -22,13 +22,12 @@
 
 #include <poll.h>
 
-#include <glog/logging.h>
-
 using std::to_string;
 
 namespace XenBackend {
 
-XenEvtchn::XenEvtchn(int domId, int port)
+XenEvtchn::XenEvtchn(int domId, int port) :
+	mLog("XenEvtchn")
 {
 	try
 	{
@@ -77,7 +76,7 @@ bool XenEvtchn::waitEvent()
 			return false;
 		}
 
-		DVLOG(2) << "Event received, port: " << mPort;
+		DLOG(mLog, DEBUG) << "Event received, port: " << mPort;
 
 		return true;
 	}
@@ -92,7 +91,7 @@ bool XenEvtchn::waitEvent()
 
 void XenEvtchn::notify()
 {
-	DVLOG(2) << "Notify event channel, port: " << mPort;
+	DLOG(mLog, DEBUG) << "Notify event channel, port: " << mPort;
 
 	if (xenevtchn_notify(mHandle, mPort) < 0)
 	{
@@ -116,7 +115,7 @@ void XenEvtchn::init(int domId, int port)
 		throw XenEvtchnException("Can't bind event channel");
 	}
 
-	VLOG(1) << "Create event channel, dom: " << domId << ", remote port: " << port << ", local port: " << mPort;
+	DLOG(mLog, DEBUG) << "Create event channel, dom: " << domId << ", remote port: " << port << ", local port: " << mPort;
 }
 
 void XenEvtchn::release()
@@ -131,7 +130,7 @@ void XenEvtchn::release()
 		xenevtchn_close(mHandle);
 	}
 
-	VLOG(1) << "Delete event channel, local port: " << mPort;
+	DLOG(mLog, DEBUG) << "Delete event channel, local port: " << mPort;
 }
 
 }

@@ -20,25 +20,28 @@
 
 #include "AlsaBackend.hpp"
 
+#include <iostream>
 #include <memory>
 #include <vector>
 
+#include <getopt.h>
 #include <signal.h>
-
-#include <glog/logging.h>
 
 #include "XenStore.hpp"
 
+using std::cout;
+using std::endl;
 using std::exception;
 using std::runtime_error;
 using std::shared_ptr;
 using std::string;
 using std::to_string;
-using std::vector;
 using std::unique_ptr;
+using std::vector;
 
 using XenBackend::DataChannelBase;
 using XenBackend::FrontendHandlerBase;
+using XenBackend::Log;
 using XenBackend::RingBufferItf;
 using XenBackend::XenStore;
 
@@ -47,14 +50,15 @@ unique_ptr<AlsaBackend> alsaBackend;
 StreamRingBuffer::StreamRingBuffer(int id, Alsa::StreamType type, int domId, int ref) :
 	RingBufferBase<xen_sndif_back_ring, xen_sndif_sring, xensnd_req, xensnd_resp>(domId, ref, 4096),
 	mId(id),
-	mCommandHandler(type, domId)
+	mCommandHandler(type, domId),
+	mLog("StreamRing(" + to_string(id) + ")")
 {
-	VLOG(1) << "Create stream ring buffer: id = " << id << ", type:" << static_cast<int>(type);
+	LOG(mLog, DEBUG) << "Create stream ring buffer: id = " << id << ", type:" << static_cast<int>(type);
 }
 
 void StreamRingBuffer::processRequest(const xensnd_req& req)
 {
-	DVLOG(2) << "Request received, id: " << mId << ", cmd:" << static_cast<int>(req.u.data.operation);
+	DLOG(mLog, DEBUG) << "Request received, id: " << mId << ", cmd:" << static_cast<int>(req.u.data.operation);
 
 	xensnd_resp rsp {};
 
@@ -72,16 +76,16 @@ void AlsaFrontendHandler::onBind()
 
 	const vector<string> cards = getXenStore().readDirectory(cardBasePath);
 
-	VLOG(1) << "On frontend bind : " << getDomId();
+	LOG(mLog, DEBUG) << "On frontend bind : " << getDomId();
 
 	if (cards.size() == 0)
 	{
-		LOG(WARNING) << "No sound cards found : " << getDomId();
+		LOG(mLog, WARNING) << "No sound cards found : " << getDomId();
 	}
 
 	for(auto cardId : cards)
 	{
-		VLOG(1) << "Found card: " << cardId;
+		LOG(mLog, DEBUG) << "Found card: " << cardId;
 
 		processCard(cardBasePath + "/" + cardId);
 	}
@@ -95,7 +99,7 @@ void AlsaFrontendHandler::processCard(const std::string& cardPath)
 
 	for(auto devId : devs)
 	{
-		VLOG(1) << "Found device: " << devId;
+		LOG(mLog, DEBUG) << "Found device: " << devId;
 
 		processDevice(devBasePath + "/" + devId);
 	}
@@ -109,7 +113,7 @@ void AlsaFrontendHandler::processDevice(const std::string& devPath)
 
 	for(auto streamId : streams)
 	{
-		VLOG(1) << "Found stream: " << streamId;
+		LOG(mLog, DEBUG) << "Found stream: " << streamId;
 
 		processStream(streamBasePath + "/" + streamId);
 	}
@@ -132,11 +136,11 @@ void AlsaFrontendHandler::createStreamChannel(int id, Alsa::StreamType type, con
 {
 	auto port = getXenStore().readInt(streamPath + "/" + XENSND_FIELD_EVT_CHNL);
 
-	VLOG(1) << "Read event channel port: " << port << ", dom: " << getDomId();
+	LOG(mLog, DEBUG) << "Read event channel port: " << port << ", dom: " << getDomId();
 
 	uint32_t ref = getXenStore().readInt(streamPath + "/" + XENSND_FIELD_RING_REF);
 
-	VLOG(1) << "Read ring buffer ref: " << ref << ", dom: " << getDomId();
+	LOG(mLog, DEBUG) << "Read ring buffer ref: " << ref << ", dom: " << getDomId();
 
 
 	shared_ptr<RingBufferItf> ringBuffer(new StreamRingBuffer(id, type, getDomId(), ref));
@@ -168,7 +172,7 @@ void terminate(int sig, siginfo_t *info, void *ptr)
 
 void segHandler(int sig)
 {
-	LOG(FATAL) << "Unknown error!";
+	LOG("Main", ERROR) << "Unknown error!";
 }
 
 void registerTerminate()
@@ -192,25 +196,60 @@ void registerTerminate()
 	signal(SIGSEGV, segHandler);
 }
 
+bool commandLineOptions(int argc, char *argv[])
+{
+
+	int opt = -1;
+
+	while((opt = getopt(argc, argv, "v:fh?")) != -1)
+	{
+		switch(opt)
+		{
+		case 'v':
+			if (!Log::setLogLevel(string(optarg)))
+			{
+				return false;
+			}
+
+			break;
+
+		case 'f':
+			Log::setShowFileAndLine(true);
+			break;
+
+		default:
+			return false;
+		}
+	}
+
+	return true;
+}
+
 int main(int argc, char *argv[])
 {
-	google::InitGoogleLogging(argv[0]);
-
 	try
 	{
 		registerTerminate();
 
-		alsaBackend.reset(new AlsaBackend(0, XENSND_DRIVER_NAME));
+		if (commandLineOptions(argc, argv))
+		{
+			alsaBackend.reset(new AlsaBackend(0, XENSND_DRIVER_NAME));
 
-		alsaBackend->run();
+			alsaBackend->run();
+		}
+		else
+		{
+			cout << "Usage: " << argv[0] << " [-v <level>]" << endl;
+			cout << "\t-v -- verbose level (disable, error, warning, info, debug)" << endl;
+		}
 	}
 	catch(const exception& e)
 	{
-		LOG(ERROR) << e.what();
+		LOG("Main", ERROR) << e.what();
 	}
 	catch(...)
 	{
-		LOG(FATAL) << "Unknown error";
+		LOG("Main", ERROR) << "Unknown error";
 	}
 
 	return 0;

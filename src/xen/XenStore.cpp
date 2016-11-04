@@ -21,8 +21,6 @@
 
 #include <poll.h>
 
-#include <glog/logging.h>
-
 using std::exception;
 using std::lock_guard;
 using std::mutex;
@@ -34,7 +32,8 @@ using std::vector;
 namespace XenBackend {
 
 XenStore::XenStore() :
-	mCheckWatchResult(false)
+	mCheckWatchResult(false),
+	mLog("XenStore")
 {
 	try
 	{
@@ -168,6 +167,8 @@ void XenStore::setWatch(const string& path, WatchCallback callback, bool initNot
 {
 	lock_guard<mutex> itfLock(mItfMutex);
 
+	LOG(mLog, DEBUG) << "Set watch: " << path;
+
 	if (!xs_watch(mXsHandle, path.c_str(), ""))
 	{
 		throw XenStoreException("Can't set xs watch for " + path);
@@ -192,6 +193,8 @@ void XenStore::clearWatch(const string& path)
 {
 	lock_guard<mutex> itfLock(mItfMutex);
 
+	LOG(mLog, DEBUG) << "Clear watch: " << path;
+
 	xs_unwatch(mXsHandle, path.c_str(), "");
 
 	{
@@ -215,7 +218,7 @@ void XenStore::setWatchErrorCallback(WatchErrorCallback errorCallback)
 
 void XenStore::init()
 {
-	VLOG(1) << "Init xen store";
+	LOG(mLog, DEBUG) << "Init xen store";
 
 	mXsHandle = xs_open(0);
 
@@ -227,7 +230,7 @@ void XenStore::init()
 
 void XenStore::release()
 {
-	VLOG(1) << "Release xen store";
+	LOG(mLog, DEBUG) << "Release xen store";
 
 	if (mXsHandle)
 	{
@@ -323,7 +326,7 @@ void XenStore::watchesThread()
 		}
 		else
 		{
-			LOG(ERROR) << e.what();
+			LOG(mLog, ERROR) << e.what();
 		}
 	}
 }
@@ -350,7 +353,7 @@ XenStore::WatchCallback XenStore::getWatchCallback(string& path)
 	auto result = mWatches.find(path);
 	if (result != mWatches.end())
 	{
-		VLOG(1) << "Watch triggered: " << path;
+		LOG(mLog, DEBUG) << "Watch triggered: " << path;
 
 		callback = result->second;
 	}
@@ -379,8 +382,6 @@ bool XenStore::isWatchesEmpty()
 
 void XenStore::clearWatches()
 {
-	VLOG(1) << "Clear watches";
-
 	for (auto watch : mWatches)
 	{
 		xs_unwatch(mXsHandle, watch.first.c_str(), "");
@@ -393,8 +394,6 @@ void XenStore::clearWatches()
 
 void XenStore::waitWatchesThreadFinished()
 {
-	VLOG(1) << "Wait for watch handler finished";
-
 	if (mThread.joinable())
 	{
 		mThread.join();

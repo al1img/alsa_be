@@ -20,8 +20,6 @@
 
 #include "XenGnttab.hpp"
 
-#include <glog/logging.h>
-
 namespace XenBackend {
 
 XenGnttab::XenGnttab()
@@ -49,7 +47,8 @@ XenGnttabBuffer::XenGnttabBuffer(int domId, uint32_t ref, int prot) :
 }
 
 XenGnttabBuffer::XenGnttabBuffer(int domId, const uint32_t* refs, size_t count, int prot) :
-	mDomId(domId)
+	mDomId(domId),
+	mLog("XenGnttabBuffer")
 {
 	init(refs, count, prot);
 }
@@ -67,7 +66,7 @@ void XenGnttabBuffer::init(const uint32_t* refs, size_t count, int prot)
 	mBuffer = nullptr;
 	mCount = count;
 
-	VLOG(1) << "Create grant table buffer, dom: " << mDomId;
+	DLOG(mLog, DEBUG) << "Create grant table buffer, dom: " << mDomId << ", count: " << count;
 
 	mBuffer = xengnttab_map_domain_grant_refs(mHandle, count, mDomId, const_cast<uint32_t*>(refs), PROT_READ | PROT_WRITE);
 
@@ -80,7 +79,7 @@ void XenGnttabBuffer::init(const uint32_t* refs, size_t count, int prot)
 
 void XenGnttabBuffer::release()
 {
-	VLOG(1) << "Delete grant table buffer, dom: " << mDomId;
+	DLOG(mLog, DEBUG) << "Delete grant table buffer, dom: " << mDomId;
 
 	if (mBuffer)
 	{

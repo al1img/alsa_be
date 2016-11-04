@@ -27,6 +27,7 @@
 
 #include "AlsaPcm.hpp"
 #include "XenGnttab.hpp"
+#include "Log.hpp"
 
 extern "C" {
 #include "sndif_linux.h"
@@ -53,6 +54,8 @@ private:
 	std::unique_ptr<XenBackend::XenGnttabBuffer> mBuffer;
 
 	Alsa::AlsaPcm mAlsaPcm;
+
+	XenBackend::Log mLog;
 
 	typedef void(CommandHandler::*CommandFn)(const xensnd_req& req);
 

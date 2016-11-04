@@ -20,13 +20,12 @@
 
 #include "XenCtrl.hpp"
 
-#include <glog/logging.h>
-
 using std::vector;
 
 namespace XenBackend {
 
-XenInterface::XenInterface()
+XenInterface::XenInterface() :
+	mLog("XenInterface")
 {
 	try
 	{
@@ -74,7 +73,7 @@ void XenInterface::getDomainsInfo(vector<xc_domaininfo_t>& infos)
 
 void XenInterface::init()
 {
-	VLOG(1) << "Create xen interface";
+	DLOG(mLog, DEBUG) << "Create xen interface";
 
 	mHandle = xc_interface_open(0,0,0);
 
@@ -86,7 +85,7 @@ void XenInterface::init()
 
 void XenInterface::release()
 {
-	VLOG(1) << "Release xen interface";
+	DLOG(mLog, DEBUG) << "Release xen interface";
 
 	if (mHandle)
 	{

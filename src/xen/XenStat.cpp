@@ -20,20 +20,19 @@
 
 #include "XenStat.hpp"
 
-#include <glog/logging.h>
-
 using std::vector;
 
 namespace XenBackend {
 
-XenStat::XenStat()
+XenStat::XenStat() :
+	mLog("XenStat")
 {
-	VLOG(1) << "Init xen stat";
+	LOG(mLog, DEBUG) << "Init xen stat";
 }
 
 XenStat::~XenStat()
 {
-	VLOG(2) << "Release xen stat";
+	LOG(mLog, DEBUG) << "Release xen stat";
 }
 
 vector<uint32_t> XenStat::getRunningDoms()

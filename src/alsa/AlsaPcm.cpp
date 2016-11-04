@@ -9,8 +9,6 @@
 
 #include <exception>
 
-#include <glog/logging.h>
-
 using std::exception;
 using std::string;
 using std::to_string;
@@ -20,14 +18,15 @@ namespace Alsa {
 AlsaPcm::AlsaPcm(StreamType type, const std::string& name) :
 	mHandle(nullptr),
 	mName(name),
-	mType(type)
+	mType(type),
+	mLog("AlsaPcm")
 {
-	VLOG(1) << "Create pcm device: " << mName;
+	LOG(mLog, DEBUG) << "Create pcm device: " << mName;
 }
 
 AlsaPcm::~AlsaPcm()
 {
-	VLOG(1) << "Delete pcm device: " << mName;
+	LOG(mLog, DEBUG) << "Delete pcm device: " << mName;
 
 	close();
 }
@@ -38,7 +37,7 @@ void AlsaPcm::open(const AlsaPcmParams& params, bool forCapture)
 
 	try
 	{
-		VLOG(1) << "Open pcm device: " << mName << ", format: " << params.format
+		DLOG(mLog, DEBUG) << "Open pcm device: " << mName << ", format: " << params.format
 				<< ", rate: " << params.rate << ", channels: " << params.numChannels;
 
 		if (snd_pcm_open(&mHandle, mName.c_str(), mType == StreamType::PLAYBACK ? SND_PCM_STREAM_PLAYBACK : SND_PCM_STREAM_CAPTURE, 0) < 0)
@@ -103,7 +102,7 @@ void AlsaPcm::open(const AlsaPcmParams& params, bool forCapture)
 
 void AlsaPcm::close()
 {
-	VLOG(1) << "Close pcm device: " << mName;
+	DLOG(mLog, DEBUG) << "Close pcm device: " << mName;
 
 	if (mHandle)
 	{
@@ -116,7 +115,7 @@ void AlsaPcm::close()
 
 void AlsaPcm::read(uint8_t* buffer, ssize_t size)
 {
-	DVLOG(2) << "Read from pcm device: " << mName << ", size: " << size;
+	DLOG(mLog, DEBUG) << "Read from pcm device: " << mName << ", size: " << size;
 
 	auto numFrames = snd_pcm_bytes_to_frames(mHandle, size);
 
@@ -126,7 +125,7 @@ void AlsaPcm::read(uint8_t* buffer, ssize_t size)
 		{
 			if (status == -EPIPE)
 			{
-				LOG(WARNING) << "Device: " << mName << ", message: " << snd_strerror(status);
+				LOG(mLog, WARNING) << "Device: " << mName << ", message: " << snd_strerror(status);
 
 				snd_pcm_prepare(mHandle);
 			}
@@ -145,7 +144,7 @@ void AlsaPcm::read(uint8_t* buffer, ssize_t size)
 
 void AlsaPcm::write(uint8_t* buffer, ssize_t size)
 {
-	DVLOG(2) << "Write to pcm device: " << mName << ", size: " << size;
+	DLOG(mLog, DEBUG) << "Write to pcm device: " << mName << ", size: " << size;
 
 	auto numFrames = snd_pcm_bytes_to_frames(mHandle, size);
 
@@ -155,7 +154,7 @@ void AlsaPcm::write(uint8_t* buffer, ssize_t size)
 		{
 			if (status == -EPIPE)
 			{
-				LOG(WARNING) << "Device: " << mName << ", message: " << snd_strerror(status);
+				LOG(mLog, WARNING) << "Device: " << mName << ", message: " << snd_strerror(status);
 
 				snd_pcm_prepare(mHandle);
 			}
@@ -176,7 +175,7 @@ void AlsaPcm::info()
 {
 	int card = -1;
 
-	LOG(INFO) << "======================== Cards info ========================";
+	LOG(mLog, INFO) << "======================== Cards info ========================";
 
 	do
 	{
@@ -192,7 +191,7 @@ void AlsaPcm::info()
 	}
 	while(card != -1);
 
-	LOG(INFO) << "============================================================";
+	LOG(mLog, INFO) << "============================================================";
 }
 
 void AlsaPcm::showCardInfo(int card)
@@ -216,23 +215,23 @@ void AlsaPcm::showCardInfo(int card)
 			throw AlsaPcmException("Error getting card info");
 		}
 
-		LOG(INFO) << "Card: " << card;
+		LOG(mLog, INFO) << "Card: " << card;
 
-		LOG(INFO) << "Id: " << snd_ctl_card_info_get_id(info)
+		LOG(mLog, INFO) << "Id: " << snd_ctl_card_info_get_id(info)
 				  << ", name: " << snd_ctl_card_info_get_name(info)
 				  << ", long name: " << snd_ctl_card_info_get_longname(info);
 
-		LOG(INFO) << "Driver: " << snd_ctl_card_info_get_driver(info)
+		LOG(mLog, INFO) << "Driver: " << snd_ctl_card_info_get_driver(info)
 				  << ", mixer name: " << snd_ctl_card_info_get_mixername(info);
 
-		LOG(INFO) << "Components: " << snd_ctl_card_info_get_components(info);
+		LOG(mLog, INFO) << "Components: " << snd_ctl_card_info_get_components(info);
 
 		showPcmDevicesInfo(handle);
 
 	}
 	catch(const AlsaPcmException& e)
 	{
-		LOG(ERROR) << e.what();
+		LOG(mLog, ERROR) << e.what();
 	}
 
 	if (handle)
@@ -254,7 +253,7 @@ void AlsaPcm::showPcmDevicesInfo(snd_ctl_t* handle)
 
 		if (dev != -1)
 		{
-			LOG(INFO) << "\tDevice: " << dev;
+			LOG(mLog, INFO) << "\tDevice: " << dev;
 
 			showPcmDeviceInfo(handle, dev, SND_PCM_STREAM_PLAYBACK);
 			showPcmDeviceInfo(handle, dev, SND_PCM_STREAM_CAPTURE);
@@ -287,9 +286,9 @@ void AlsaPcm::showPcmDeviceInfo(snd_ctl_t* handle, int dev, snd_pcm_stream_t str
 
 	auto subdeviceCount = snd_pcm_info_get_subdevices_count(pcminfo);
 
-	LOG(INFO) << "\tStream: " << snd_pcm_stream_name(stream);
+	LOG(mLog, INFO) << "\tStream: " << snd_pcm_stream_name(stream);
 
-	LOG(INFO) << "\t\tId: " << snd_pcm_info_get_id(pcminfo)
+	LOG(mLog, INFO) << "\t\tId: " << snd_pcm_info_get_id(pcminfo)
 			  << ", name: " << snd_pcm_info_get_name(pcminfo)
 			  << ", subdev count: " << subdeviceCount
 			  << ", subdev avail: " << snd_pcm_info_get_subdevices_avail(pcminfo);
@@ -299,7 +298,7 @@ void AlsaPcm::showPcmDeviceInfo(snd_ctl_t* handle, int dev, snd_pcm_stream_t str
 
 void AlsaPcm::showPcmSubdevicesInfo(snd_ctl_t* handle, snd_pcm_info_t *pcminfo, int subdeviceCount)
 {
-	LOG(INFO) << "\t\t\tSubdev: 0, name: " << snd_pcm_info_get_subdevice_name(pcminfo);
+	LOG(mLog, INFO) << "\t\t\tSubdev: 0, name: " << snd_pcm_info_get_subdevice_name(pcminfo);
 
 	for (auto i = 1; i < subdeviceCount; i++)
 	{
@@ -310,7 +309,7 @@ void AlsaPcm::showPcmSubdevicesInfo(snd_ctl_t* handle, snd_pcm_info_t *pcminfo, 
 			throw AlsaPcmException("Error getting pcm device info");
 		}
 
-		LOG(INFO) << "\t\t\tSubdev: " << i << ", name: " << snd_pcm_info_get_subdevice_name(pcminfo);
+		LOG(mLog, INFO) << "\t\t\tSubdev: " << i << ", name: " << snd_pcm_info_get_subdevice_name(pcminfo);
 	}
 }
 

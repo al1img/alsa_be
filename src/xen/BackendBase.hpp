@@ -32,6 +32,7 @@
 #include "XenException.hpp"
 #include "XenStore.hpp"
 #include "XenStat.hpp"
+#include "Log.hpp"
 
 namespace XenBackend {
 
@@ -74,6 +75,8 @@ private:
 
 
 	std::atomic_bool mTerminate;
+
+	Log mLog;
 
 	void createFrontendHandler(const std::pair<int, int>& ids);
 	void checkTerminatedFrontends();

@@ -22,8 +22,6 @@
 
 #include <exception>
 
-#include <glog/logging.h>
-
 #include "FrontendHandlerBase.hpp"
 #include "RingBufferBase.hpp"
 #include "XenStore.hpp"
@@ -42,9 +40,10 @@ DataChannelBase::DataChannelBase(const string& name, int domId, int port, shared
 	mEventChannel(domId, port),
 	mRingBuffer(ringBuffer),
 	mTerminate(false),
-	mTerminated(false)
+	mTerminated(false),
+	mLog("DataChannel")
 {
-	VLOG(1) << "Create data channel: " << mName;
+	LOG(mLog, DEBUG) << "Create data channel: " << mName;
 
 	mRingBuffer->setNotifyEventChannelCbk([this] () { mEventChannel.notify(); });
 }
@@ -53,21 +52,21 @@ DataChannelBase::~DataChannelBase()
 {
 	stop();
 
-	VLOG(1) << "Delete data channel: " << mName;
+	LOG(mLog, DEBUG) << "Delete data channel: " << mName;
 }
 
 void DataChannelBase::start()
 {
 	lock_guard<mutex> lock(mMutex);
 
-	VLOG(1) << "Start data channel: " << mName;
+	LOG(mLog, DEBUG) << "Start data channel: " << mName;
 
 	mThread = thread(&DataChannelBase::run, this);
 }
 
 void DataChannelBase::stop()
 {
-	VLOG(1) << "Stop data channel: " << mName;
+	LOG(mLog, DEBUG) << "Stop data channel: " << mName;
 
 	mTerminate = true;
 
@@ -91,7 +90,7 @@ void DataChannelBase::run()
 	}
 	catch(const exception& e)
 	{
-		LOG(ERROR) << e.what();
+		LOG(mLog, ERROR) << e.what();
 	}
 
 	mTerminated = true;

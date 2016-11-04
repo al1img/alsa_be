@@ -24,10 +24,12 @@
 #include <sys/mman.h>
 
 extern "C" {
+#include <xenctrl.h>
 #include <xengnttab.h>
 }
 
 #include "XenException.hpp"
+#include "Log.hpp"
 
 namespace XenBackend {
 
@@ -61,12 +63,15 @@ public:
 	~XenGnttabBuffer();
 
 	void* get() const { return mBuffer; }
+	size_t size() const { return mCount * XC_PAGE_SIZE; }
 
 private:
 	void* mBuffer;
 	xengnttab_handle* mHandle;
 	size_t mCount;
 	int mDomId;
+	Log mLog;
+
 
 	void init(const uint32_t* refs, size_t count, int prot);
 	void release();
