@@ -48,7 +48,7 @@ using XenBackend::XenStore;
 unique_ptr<AlsaBackend> alsaBackend;
 
 StreamRingBuffer::StreamRingBuffer(int id, Alsa::StreamType type, int domId, int ref) :
-	RingBufferBase<xen_sndif_back_ring, xen_sndif_sring, xensnd_req, xensnd_resp>(domId, ref, 4096),
+	RingBufferBase<xen_sndif_back_ring, xen_sndif_sring, xensnd_req, xensnd_resp>(domId, ref),
 	mId(id),
 	mCommandHandler(type, domId),
 	mLog("StreamRing(" + to_string(id) + ")")
