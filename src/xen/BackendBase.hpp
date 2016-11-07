@@ -116,7 +116,7 @@ public:
 
 protected:
 	/**
-	 * Called periodically to check if a new frontend's appeared.
+	 * Is called periodically to check if a new frontend's appeared.
 	 * In order to change the way a new domain is detected the client may
 	 * override this method.
 	 *
@@ -127,7 +127,7 @@ protected:
 	virtual bool getNewFrontend(int& domId, int& id);
 
 	/**
-	 * Called when new frontend detected.
+	 * Is called when new frontend detected.
 	 * Basically the client should create
 	 * the instance of FrontendHandlerBase class and pass it to
 	 * addFrontendHandler().
