@@ -39,7 +39,7 @@ using std::to_string;
 using std::unique_ptr;
 using std::vector;
 
-using XenBackend::DataChannelBase;
+using XenBackend::DataChannel;
 using XenBackend::FrontendHandlerBase;
 using XenBackend::Log;
 using XenBackend::RingBufferItf;
@@ -145,7 +145,7 @@ void AlsaFrontendHandler::createStreamChannel(int id, Alsa::StreamType type, con
 
 	shared_ptr<RingBufferItf> ringBuffer(new StreamRingBuffer(id, type, getDomId(), ref));
 
-	addChannel(shared_ptr<DataChannelBase>(new DataChannelBase("stream " + to_string(id), getDomId(), port, ringBuffer)));
+	addChannel(shared_ptr<DataChannel>(new DataChannel("stream " + to_string(id), getDomId(), port, ringBuffer)));
 }
 
 // Uncomment for manual dom

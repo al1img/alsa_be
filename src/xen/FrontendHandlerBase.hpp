@@ -33,7 +33,7 @@ extern "C" {
 #include <xen/io/xenbus.h>
 }
 
-#include "DataChannelBase.hpp"
+#include "DataChannel.hpp"
 #include "XenException.hpp"
 #include "XenStore.hpp"
 #include "Log.hpp"
@@ -64,7 +64,7 @@ public:
 protected:
 	virtual void onBind() = 0;
 
-	void addChannel(std::shared_ptr<DataChannelBase> channel);
+	void addChannel(std::shared_ptr<DataChannel> channel);
 
 private:
 	int mId;
@@ -79,7 +79,7 @@ private:
 	std::string mXsBackendPath;
 	std::string mXsFrontendPath;
 
-	std::map<std::string, std::shared_ptr<DataChannelBase>> mChannels;
+	std::map<std::string, std::shared_ptr<DataChannel>> mChannels;
 
 	bool mWaitForFrontendInitialising;
 

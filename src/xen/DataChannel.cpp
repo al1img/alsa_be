@@ -18,10 +18,9 @@
  *
  */
 
-#include "DataChannelBase.hpp"
-
 #include <exception>
 
+#include "DataChannel.hpp"
 #include "FrontendHandlerBase.hpp"
 #include "RingBufferBase.hpp"
 #include "XenStore.hpp"
@@ -35,7 +34,7 @@ using std::thread;
 
 namespace XenBackend {
 
-DataChannelBase::DataChannelBase(const string& name, int domId, int port, shared_ptr<RingBufferItf> ringBuffer) :
+DataChannel::DataChannel(const string& name, int domId, int port, shared_ptr<RingBufferItf> ringBuffer) :
 	mName(name),
 	mEventChannel(domId, port),
 	mRingBuffer(ringBuffer),
@@ -48,23 +47,23 @@ DataChannelBase::DataChannelBase(const string& name, int domId, int port, shared
 	mRingBuffer->setNotifyEventChannelCbk([this] () { mEventChannel.notify(); });
 }
 
-DataChannelBase::~DataChannelBase()
+DataChannel::~DataChannel()
 {
 	stop();
 
 	LOG(mLog, DEBUG) << "Delete data channel: " << mName;
 }
 
-void DataChannelBase::start()
+void DataChannel::start()
 {
 	lock_guard<mutex> lock(mMutex);
 
 	LOG(mLog, DEBUG) << "Start data channel: " << mName;
 
-	mThread = thread(&DataChannelBase::run, this);
+	mThread = thread(&DataChannel::run, this);
 }
 
-void DataChannelBase::stop()
+void DataChannel::stop()
 {
 	LOG(mLog, DEBUG) << "Stop data channel: " << mName;
 
@@ -76,7 +75,7 @@ void DataChannelBase::stop()
 	}
 }
 
-void DataChannelBase::run()
+void DataChannel::run()
 {
 	try
 	{

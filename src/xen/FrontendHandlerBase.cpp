@@ -78,7 +78,7 @@ FrontendHandlerBase::~FrontendHandlerBase()
 	LOG(mLog, DEBUG) << mLogId << "Delete frontend handler";
 }
 
-void FrontendHandlerBase::addChannel(shared_ptr<DataChannelBase> channel)
+void FrontendHandlerBase::addChannel(shared_ptr<DataChannel> channel)
 {
 	mChannels.insert(make_pair(channel->getName(), channel));
 

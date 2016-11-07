@@ -18,8 +18,8 @@
  *
  */
 
-#ifndef INCLUDE_DATACHANNELBASE_HPP_
-#define INCLUDE_DATACHANNELBASE_HPP_
+#ifndef INCLUDE_DATACHANNEL_HPP_
+#define INCLUDE_DATACHANNEL_HPP_
 
 #include <atomic>
 #include <memory>
@@ -42,11 +42,11 @@ class DataChannelException : public XenException
 class FrontendHandlerBase;
 class XenStore;
 
-class DataChannelBase
+class DataChannel
 {
 public:
-	DataChannelBase(const std::string& name, int domId, int port, std::shared_ptr<RingBufferItf> ringBuffer);
-	virtual ~DataChannelBase();
+	DataChannel(const std::string& name, int domId, int port, std::shared_ptr<RingBufferItf> ringBuffer);
+	virtual ~DataChannel();
 
 	void start();
 	void stop();
