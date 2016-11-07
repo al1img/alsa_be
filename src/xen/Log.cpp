@@ -53,11 +53,19 @@ size_t LogLine::sAlignmentLength = 0;
 
 bool Log::setLogLevel(const string& strLevel)
 {
-	static const char* strLevelArray[] = {"DISABLE", "ERROR", "WARNING", "INFO", "DEBUG"};
+	static const char* strLevelArray[] =
+	{
+		"DISABLE",
+		"ERROR",
+		"WARNING",
+		"INFO",
+		"DEBUG"
+	};
 
 	string strLevelUp = strLevel;
 
-	transform(strLevelUp.begin(), strLevelUp.end(), strLevelUp.begin(), (int (*)(int))std::toupper);
+	transform(strLevelUp.begin(), strLevelUp.end(), strLevelUp.begin(),
+			  (int (*)(int))std::toupper);
 
 	for(auto i = 0; i <= static_cast<int>(LogLevel::logDEBUG); i++)
 	{
@@ -90,7 +98,8 @@ LogLine::~LogLine()
 	}
 }
 
-ostringstream& LogLine::get(Log& log, const char* file, int line, LogLevel level)
+ostringstream& LogLine::get(Log& log, const char* file,
+							int line, LogLevel level)
 {
 	lock_guard<mutex> lock(mMutex);
 
@@ -109,7 +118,8 @@ ostringstream& LogLine::get(Log& log, const char* file, int line, LogLevel level
 	return mStream;
 }
 
-ostringstream& LogLine::get(const char* name, const char* file, int line, LogLevel level)
+ostringstream& LogLine::get(const char* name, const char* file,
+							int line, LogLevel level)
 {
 	mCurrentLevel = level;
 	mSetLevel = Log::sCurrentLevel;
@@ -137,7 +147,8 @@ void LogLine::putHeader(const string& header)
 		}
 
 		mStream << nowTime()
-				<< " | " << header << " " << string(sAlignmentLength - header.length(), ' ') << "| "
+				<< " | " << header << " "
+				<< string(sAlignmentLength - header.length(), ' ') << "| "
 				<< levelToString(mCurrentLevel) << " - ";
 	}
 }
@@ -157,7 +168,8 @@ string LogLine::nowTime()
 
 	std::stringstream ss;
 
-	ss << put_time(localtime(&time), "%d.%m.%y %X.") << setfill('0') << setw(3) << ms.count();
+	ss << put_time(localtime(&time), "%d.%m.%y %X.")
+	   << setfill('0') << setw(3) << ms.count();
 
 	return ss.str();
 }
