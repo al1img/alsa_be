@@ -46,7 +46,9 @@ using std::vector;
 
 namespace XenBackend {
 
-FrontendHandlerBase::FrontendHandlerBase(int domId, BackendBase& backend, int id) :
+FrontendHandlerBase::FrontendHandlerBase(int domId,
+										 BackendBase& backend,
+										 int id) :
 	mId(id),
 	mDomId(domId),
 	mBackend(backend),
@@ -63,9 +65,12 @@ FrontendHandlerBase::FrontendHandlerBase(int domId, BackendBase& backend, int id
 
 	setBackendState(XenbusStateInitialising);
 
-	mXenStore.setWatchErrorCallback(bind(&FrontendHandlerBase::onXenStoreError, this, _1));
+	mXenStore.setWatchErrorCallback(bind(&FrontendHandlerBase::onXenStoreError,
+									this, _1));
 
-	mXenStore.setWatch(mXsFrontendPath + "/state", bind(&FrontendHandlerBase::frontendPathChanged, this, _1), true);
+	mXenStore.setWatch(mXsFrontendPath + "/state",
+					   bind(&FrontendHandlerBase::frontendPathChanged,
+							this, _1), true);
 }
 
 FrontendHandlerBase::~FrontendHandlerBase()
@@ -90,15 +95,16 @@ void FrontendHandlerBase::initXenStorePathes()
 {
 	stringstream ss;
 
-	ss << mXenStore.getDomainPath(mDomId) << "/device/" << mBackend.getDeviceName() << "/" << mId;
+	ss << mXenStore.getDomainPath(mDomId) << "/device/"
+	   << mBackend.getDeviceName() << "/" << mId;
 
 	mXsFrontendPath = ss.str();
 
 	ss.str("");
 	ss.clear();
 
-	ss << mXenStore.getDomainPath(mBackend.getId()) << "/backend/" << mBackend.getDeviceName() << "/" <<
-			mDomId << "/" << mBackend.getId();
+	ss << mXenStore.getDomainPath(mBackend.getId()) << "/backend/"
+	   << mBackend.getDeviceName() << "/" << mDomId << "/" << mBackend.getId();
 
 	mXsBackendPath = ss.str();
 
@@ -153,7 +159,8 @@ void FrontendHandlerBase::frontendPathChanged(const string& path)
 
 void FrontendHandlerBase::frontendStateChanged(xenbus_state state)
 {
-	LOG(mLog, INFO) << mLogId << "Frontend state changed to: " << Utils::logState(state);
+	LOG(mLog, INFO) << mLogId << "Frontend state changed to: "
+					<< Utils::logState(state);
 
 	switch(state)
 	{
@@ -202,7 +209,8 @@ void FrontendHandlerBase::onXenStoreError(const std::exception& e)
 
 void FrontendHandlerBase::setBackendState(xenbus_state state)
 {
-	LOG(mLog, INFO) << mLogId << "Set backend state to: " << Utils::logState(state);
+	LOG(mLog, INFO) << mLogId << "Set backend state to: "
+					<< Utils::logState(state);
 
 	auto path = mXsBackendPath + "/state";
 
