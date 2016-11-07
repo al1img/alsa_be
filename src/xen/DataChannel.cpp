@@ -34,7 +34,8 @@ using std::thread;
 
 namespace XenBackend {
 
-DataChannel::DataChannel(const string& name, int domId, int port, shared_ptr<RingBufferItf> ringBuffer) :
+DataChannel::DataChannel(const string& name, int domId, int port,
+						 shared_ptr<RingBufferItf> ringBuffer) :
 	mName(name),
 	mEventChannel(domId, port),
 	mRingBuffer(ringBuffer),
@@ -44,7 +45,8 @@ DataChannel::DataChannel(const string& name, int domId, int port, shared_ptr<Rin
 {
 	LOG(mLog, DEBUG) << "Create data channel: " << mName;
 
-	mRingBuffer->setNotifyEventChannelCbk([this] () { mEventChannel.notify(); });
+	mRingBuffer->setNotifyEventChannelCbk([this] ()
+										  { mEventChannel.notify(); });
 }
 
 DataChannel::~DataChannel()
