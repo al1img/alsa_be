@@ -22,7 +22,7 @@
 #define INCLUDE_FRONTENDHANDLERBASE_HPP_
 
 #include <atomic>
-#include <map>
+#include <list>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -79,7 +79,7 @@ private:
 	std::string mXsBackendPath;
 	std::string mXsFrontendPath;
 
-	std::map<std::string, std::shared_ptr<DataChannel>> mChannels;
+	std::list<std::shared_ptr<DataChannel>> mChannels;
 
 	bool mWaitForFrontendInitialising;
 

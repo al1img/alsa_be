@@ -36,7 +36,6 @@ using std::bind;
 using std::exception;
 using std::find;
 using std::lock_guard;
-using std::make_pair;
 using std::placeholders::_1;
 using std::shared_ptr;
 using std::stoi;
@@ -80,7 +79,7 @@ FrontendHandlerBase::~FrontendHandlerBase()
 
 void FrontendHandlerBase::addChannel(shared_ptr<DataChannel> channel)
 {
-	mChannels.insert(make_pair(channel->getName(), channel));
+	mChannels.push_back(channel);
 
 	channel->start();
 
@@ -111,7 +110,7 @@ xenbus_state FrontendHandlerBase::getBackendState()
 {
 	for (auto channel : mChannels)
 	{
-		if (channel.second->isTerminated())
+		if (channel->isTerminated())
 		{
 			setBackendState(XenbusStateClosing);
 		}
