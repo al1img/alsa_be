@@ -29,10 +29,27 @@ extern "C" {
 
 namespace XenBackend {
 
+/***************************************************************************//**
+ * Different helpers.
+ * @ingroup Xen
+ ******************************************************************************/
 class Utils
 {
 public:
+
+	/**
+	 * Returns string which represents domain id and instance id for logging
+	 * @param domId domain id
+	 * @param id    instance id
+	 * @return string representation of domain id and istance id
+	 */
 	static std::string logDomId(int domId, int id);
+
+	/**
+	 * Returns string representation of xen domain state
+	 * @param state xen domain state
+	 * @return string representation of xen domain state
+	 */
 	static std::string logState(xenbus_state state);
 };
 
