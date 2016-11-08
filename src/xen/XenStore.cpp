@@ -76,7 +76,8 @@ string XenStore::getDomainPath(int domId)
 int XenStore::readInt(const string& path)
 {
 	unsigned length;
-	auto pData = static_cast<char*>(xs_read(mXsHandle, XBT_NULL, path.c_str(), &length));
+	auto pData = static_cast<char*>(xs_read(mXsHandle, XBT_NULL, path.c_str(),
+											&length));
 
 	if (!pData)
 	{
@@ -93,7 +94,8 @@ int XenStore::readInt(const string& path)
 string XenStore::readString(const string& path)
 {
 	unsigned length;
-	auto pData = static_cast<char*>(xs_read(mXsHandle, XBT_NULL, path.c_str(), &length));
+	auto pData = static_cast<char*>(xs_read(mXsHandle, XBT_NULL, path.c_str(),
+											&length));
 
 	if (!pData)
 	{
@@ -111,7 +113,8 @@ void XenStore::writeInt(const string& path, int value)
 {
 	auto strValue = to_string(value);
 
-	if (!xs_write(mXsHandle, XBT_NULL, path.c_str(), strValue.c_str(), strValue.length()))
+	if (!xs_write(mXsHandle, XBT_NULL, path.c_str(), strValue.c_str(),
+				  strValue.length()))
 	{
 		throw XenStoreException("Can't write value to " + path);
 	}
@@ -164,7 +167,8 @@ bool XenStore::checkIfExist(const string& path)
 	return true;
 }
 
-void XenStore::setWatch(const string& path, WatchCallback callback, bool initNotify)
+void XenStore::setWatch(const string& path, WatchCallback callback,
+						bool initNotify)
 {
 	lock_guard<mutex> itfLock(mItfMutex);
 
