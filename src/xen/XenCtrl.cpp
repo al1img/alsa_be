@@ -54,7 +54,8 @@ void XenInterface::getDomainsInfo(vector<xc_domaininfo_t>& infos)
 
 	do
 	{
-		newDomains = xc_domain_getinfolist(mHandle, numDomains, cDomInfoChunkSize, domainInfo);
+		newDomains = xc_domain_getinfolist(mHandle, numDomains,
+										   cDomInfoChunkSize, domainInfo);
 
 		if (newDomains < 0)
 		{
