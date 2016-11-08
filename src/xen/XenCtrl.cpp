@@ -80,7 +80,7 @@ void XenInterface::init()
 
 	if (!mHandle)
 	{
-		throw XenException("Can't open xc interface");
+		throw XenCtrlException("Can't open xc interface");
 	}
 }
 
