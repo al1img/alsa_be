@@ -31,7 +31,8 @@ using std::vector;
 
 namespace XenBackend {
 
-XenStore::XenStore() :
+XenStore::XenStore(WatchErrorCallback errorCallback) :
+	mErrorCallback(errorCallback),
 	mCheckWatchResult(false),
 	mLog("XenStore")
 {
@@ -209,13 +210,6 @@ void XenStore::clearWatch(const string& path)
 	}
 }
 
-void XenStore::setWatchErrorCallback(WatchErrorCallback errorCallback)
-{
-	lock_guard<mutex> lock(mMutex);
-
-	mErrorCallback = errorCallback;
-}
-
 void XenStore::init()
 {
 	LOG(mLog, DEBUG) << "Init xen store";
@@ -311,7 +305,7 @@ void XenStore::watchesThread()
 
 				if (callback)
 				{
-					callback(path);
+					callback();
 				}
 			}
 		}

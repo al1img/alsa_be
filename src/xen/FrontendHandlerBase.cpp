@@ -54,6 +54,7 @@ FrontendHandlerBase::FrontendHandlerBase(int domId,
 	mBackend(backend),
 	mBackendState(XenbusStateUnknown),
 	mFrontendState(XenbusStateUnknown),
+	mXenStore(bind(&FrontendHandlerBase::onXenStoreError, this, _1)),
 	mWaitForFrontendInitialising(true),
 	mLog("Frontend")
 {
@@ -65,12 +66,11 @@ FrontendHandlerBase::FrontendHandlerBase(int domId,
 
 	setBackendState(XenbusStateInitialising);
 
-	mXenStore.setWatchErrorCallback(bind(&FrontendHandlerBase::onXenStoreError,
-									this, _1));
+	auto statePath = mXsFrontendPath + "/state";
 
-	mXenStore.setWatch(mXsFrontendPath + "/state",
+	mXenStore.setWatch(statePath,
 					   bind(&FrontendHandlerBase::frontendPathChanged,
-							this, _1), true);
+					   this, statePath), true);
 }
 
 FrontendHandlerBase::~FrontendHandlerBase()

@@ -55,10 +55,13 @@ class XenStoreException : public XenException
 class XenStore
 {
 public:
-	typedef std::function<void(const std::string& path)> WatchCallback;
+	typedef std::function<void()> WatchCallback;
 	typedef std::function<void(const std::exception&)> WatchErrorCallback;
 
-	XenStore();
+	/**
+	 * @param errorCallback callback on XS watches error
+	 */
+	XenStore(WatchErrorCallback errorCallback = nullptr);
 	XenStore(const XenStore&) = delete;
 	XenStore& operator=(XenStore const&) = delete;
 	~XenStore();
@@ -125,13 +128,6 @@ public:
 	 * @param path path to the entry.
 	 */
 	void clearWatch(const std::string& path);
-
-	/**
-	 * Sets callback which will be called when an error occurs during XS watches
-	 * handling.
-	 * @param errorCallback callback on XS watches error
-	 */
-	void setWatchErrorCallback(WatchErrorCallback errorCallback);
 
 private:
 	const int cPollWatchesTimeoutMs = 100;
