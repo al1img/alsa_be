@@ -46,7 +46,8 @@ XenGnttabBuffer::XenGnttabBuffer(int domId, uint32_t ref, int prot) :
 
 }
 
-XenGnttabBuffer::XenGnttabBuffer(int domId, const uint32_t* refs, size_t count, int prot) :
+XenGnttabBuffer::XenGnttabBuffer(int domId, const uint32_t* refs, size_t count,
+								 int prot) :
 	mDomId(domId),
 	mLog("XenGnttabBuffer")
 {
@@ -66,9 +67,12 @@ void XenGnttabBuffer::init(const uint32_t* refs, size_t count, int prot)
 	mBuffer = nullptr;
 	mCount = count;
 
-	DLOG(mLog, DEBUG) << "Create grant table buffer, dom: " << mDomId << ", count: " << count;
+	DLOG(mLog, DEBUG) << "Create grant table buffer, dom: " << mDomId
+					  << ", count: " << count;
 
-	mBuffer = xengnttab_map_domain_grant_refs(mHandle, count, mDomId, const_cast<uint32_t*>(refs), PROT_READ | PROT_WRITE);
+	mBuffer = xengnttab_map_domain_grant_refs(mHandle, count, mDomId,
+											  const_cast<uint32_t*>(refs),
+											  PROT_READ | PROT_WRITE);
 
 	if (!mBuffer)
 	{
