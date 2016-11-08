@@ -47,8 +47,8 @@ class XenEvtchn
 {
 public:
 	/**
-	 * @param domId domain id
-	 * @param port  event channel port number
+	 * @param[in] domId domain id
+	 * @param[in] port  event channel port number
 	 */
 	XenEvtchn(int domId, int port);
 	XenEvtchn(const XenEvtchn&) = delete;

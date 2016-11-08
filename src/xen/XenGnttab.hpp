@@ -74,17 +74,17 @@ class XenGnttabBuffer
 public:
 
 	/**
-	 * @param domId domain id
-	 * @param ref   grant reference id
-	 * @param prot  same flag as in mmap()
+	 * @param[in] domId domain id
+	 * @param[in] ref   grant reference id
+	 * @param[in] prot  same flag as in mmap()
 	 */
 	XenGnttabBuffer(int domId, uint32_t ref, int prot);
 
 	/**
-	 * @param domId domain id
-	 * @param refs  array of grant reference ids
-	 * @param count number of grant refgerence ids
-	 * @param prot  same flag as in mmap()
+	 * @param[in] domId domain id
+	 * @param[in] refs  array of grant reference ids
+	 * @param[in] count number of grant refgerence ids
+	 * @param[in] prot  same flag as in mmap()
 	 */
 	XenGnttabBuffer(int domId, const uint32_t* refs, size_t count, int prot);
 	XenGnttabBuffer(const XenGnttabBuffer&) = delete;
