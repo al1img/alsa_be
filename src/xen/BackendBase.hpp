@@ -162,10 +162,6 @@ private:
 
 	mutable std::mutex mMutex;
 
-	/**
-	 * Map to store frontend handlers.
-	 * Pair of domain and instance ids is used as the key.
-	 */
 	std::map<std::pair<int, int>,
 			 std::shared_ptr<FrontendHandlerBase>> mFrontendHandlers;
 
