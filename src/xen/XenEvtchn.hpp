@@ -40,7 +40,7 @@ class XenEvtchnException : public XenException
 };
 
 /***************************************************************************//**
- * Implementes xen event channel.
+ * Implements xen event channel.
  * @ingroup Xen
  ******************************************************************************/
 class XenEvtchn

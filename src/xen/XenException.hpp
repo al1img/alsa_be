@@ -26,6 +26,10 @@
 
 namespace XenBackend {
 
+/***************************************************************************//**
+ * Base class for all Xen exception.
+ * @ingroup Xen
+ ******************************************************************************/
 class XenException : public std::exception
 {
 public:
