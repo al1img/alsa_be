@@ -49,6 +49,9 @@ class RingBufferException : public XenException
 class RingBufferItf
 {
 public:
+
+	typedef std::function<void()> NotifyEventCallback;
+
 	virtual ~RingBufferItf() {}
 
 	/**
@@ -62,7 +65,7 @@ public:
 	 * should send notification.
 	 * @param[in] cbk <i>std::function</i> callback
 	 */
-	virtual void setNotifyEventChannelCbk(std::function<void()> cbk) = 0;
+	virtual void setNotifyEventChannelCbk(NotifyEventCallback cbk) = 0;
 };
 
 /***************************************************************************//**
@@ -141,9 +144,9 @@ protected:
 private:
 	Ring mRing;
 	XenGnttabBuffer mBuffer;
-	std::function<void()> mNotifyEventChannelCbk;
+	NotifyEventCallback mNotifyEventChannelCbk;
 
-	void setNotifyEventChannelCbk(std::function<void()> cbk)
+	void setNotifyEventChannelCbk(NotifyEventCallback cbk)
 	{
 		mNotifyEventChannelCbk = cbk;
 	}

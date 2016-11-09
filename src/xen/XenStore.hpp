@@ -61,7 +61,7 @@ public:
 	/**
 	 * @param errorCallback callback on XS watches error
 	 */
-	XenStore(WatchErrorCallback errorCallback = nullptr);
+	explicit XenStore(WatchErrorCallback errorCallback = nullptr);
 	XenStore(const XenStore&) = delete;
 	XenStore& operator=(XenStore const&) = delete;
 	~XenStore();
@@ -121,7 +121,8 @@ public:
 	 * @param initNotify indicates whether the callback should be called after
 	 * adding watch even if there is no changes.
 	 */
-	void setWatch(const std::string& path, WatchCallback callback, bool initNotify = false);
+	void setWatch(const std::string& path, WatchCallback callback,
+				  bool initNotify = false);
 
 	/**
 	 * Clears watch for XS entry change.
@@ -132,7 +133,7 @@ public:
 private:
 	const int cPollWatchesTimeoutMs = 100;
 
-	std::function<void(const std::exception&)> mErrorCallback;
+	WatchErrorCallback mErrorCallback;
 
 	xs_handle*	mXsHandle;
 

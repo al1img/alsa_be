@@ -17,7 +17,6 @@ endif()
 set(SOURCES
 	src/alsa/AlsaPcm.cpp
 	src/xen/BackendBase.cpp
-	src/xen/DataChannel.cpp
 	src/xen/FrontendHandlerBase.cpp
 	src/xen/Log.cpp
 	src/xen/Utils.cpp

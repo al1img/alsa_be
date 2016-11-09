@@ -36,6 +36,8 @@ using std::bind;
 using std::exception;
 using std::find;
 using std::lock_guard;
+using std::make_pair;
+using std::mutex;
 using std::placeholders::_1;
 using std::shared_ptr;
 using std::stoi;
@@ -54,7 +56,7 @@ FrontendHandlerBase::FrontendHandlerBase(int domId,
 	mBackend(backend),
 	mBackendState(XenbusStateUnknown),
 	mFrontendState(XenbusStateUnknown),
-	mXenStore(bind(&FrontendHandlerBase::onXenStoreError, this, _1)),
+	mXenStore(bind(&FrontendHandlerBase::onXenError, this, _1)),
 	mWaitForFrontendInitialising(true),
 	mLog("Frontend")
 {
@@ -82,13 +84,19 @@ FrontendHandlerBase::~FrontendHandlerBase()
 	LOG(mLog, DEBUG) << mLogId << "Delete frontend handler";
 }
 
-void FrontendHandlerBase::addChannel(shared_ptr<DataChannel> channel)
+void FrontendHandlerBase::addChannel(int evtchnPort,
+									 shared_ptr<RingBufferItf> ringBuffer)
 {
-	mChannels.push_back(channel);
+	shared_ptr<XenEvtchn> eventChannel(new XenEvtchn(mDomId, evtchnPort,
+			[ringBuffer] { ringBuffer->onRequestReceived(); },
+			[this] (const exception& e) { onXenError(e); } ));
 
-	channel->start();
+	ringBuffer->setNotifyEventChannelCbk([eventChannel] { eventChannel->notify(); });
 
-	LOG(mLog, INFO) << mLogId << "Add channel: " << channel->getName();
+	mChannels.push_back(make_pair(eventChannel, ringBuffer));
+
+	LOG(mLog, INFO) << mLogId << "Add channel, evtchn port: "
+					<< eventChannel->getPort();
 }
 
 void FrontendHandlerBase::initXenStorePathes()
@@ -112,15 +120,9 @@ void FrontendHandlerBase::initXenStorePathes()
 	LOG(mLog, DEBUG) << "Backend path:  " << mXsBackendPath;
 }
 
-xenbus_state FrontendHandlerBase::getBackendState()
+xenbus_state FrontendHandlerBase::getBackendState() const
 {
-	for (auto channel : mChannels)
-	{
-		if (channel->isTerminated())
-		{
-			setBackendState(XenbusStateClosing);
-		}
-	}
+	lock_guard<mutex> lock(mMutex);
 
 	return mBackendState;
 }
@@ -200,7 +202,7 @@ void FrontendHandlerBase::frontendStateChanged(xenbus_state state)
 	}
 }
 
-void FrontendHandlerBase::onXenStoreError(const std::exception& e)
+void FrontendHandlerBase::onXenError(const std::exception& e)
 {
 	LOG(mLog, ERROR) << mLogId << e.what();
 
@@ -209,6 +211,8 @@ void FrontendHandlerBase::onXenStoreError(const std::exception& e)
 
 void FrontendHandlerBase::setBackendState(xenbus_state state)
 {
+	lock_guard<mutex> lock(mMutex);
+
 	LOG(mLog, INFO) << mLogId << "Set backend state to: "
 					<< Utils::logState(state);
 

@@ -22,16 +22,27 @@
 
 #include <poll.h>
 
+using std::exception;
+using std::lock_guard;
+using std::mutex;
+using std::thread;
 using std::to_string;
 
 namespace XenBackend {
 
-XenEvtchn::XenEvtchn(int domId, int port) :
+XenEvtchn::XenEvtchn(int domId, int port, Callback callback,
+					 ErrorCallback errorCallback) :
+	mPort(-1),
+	mCallback(callback),
+	mErrorCallback(errorCallback),
+	mTerminate(false),
 	mLog("XenEvtchn")
 {
 	try
 	{
 		init(domId, port);
+
+		mThread = thread(&XenEvtchn::eventThread, this);
 	}
 	catch(const XenException& e)
 	{
@@ -43,50 +54,14 @@ XenEvtchn::XenEvtchn(int domId, int port) :
 
 XenEvtchn::~XenEvtchn()
 {
+	mTerminate = true;
+
+	if (mThread.joinable())
+	{
+		mThread.join();
+	}
+
 	release();
-}
-
-bool XenEvtchn::waitEvent()
-{
-	pollfd fds;
-
-	fds.fd = xenevtchn_fd(mHandle);
-	fds.events = POLLIN;
-
-	auto ret = poll(&fds, 1, cPoolEventTimeoutMs);
-
-	if (ret > 0)
-	{
-		auto port = xenevtchn_pending(mHandle);
-
-		if (port < 0)
-		{
-			throw XenEvtchnException("Can't get pending port");
-		}
-
-		if (xenevtchn_unmask(mHandle, port) < 0)
-		{
-			throw XenEvtchnException("Can't unmask event channel");
-		}
-
-		if (port != mPort)
-		{
-			throw XenEvtchnException("Error port number: " + to_string(port) + ", expected: " + to_string(mPort));
-
-			return false;
-		}
-
-		DLOG(mLog, DEBUG) << "Event received, port: " << mPort;
-
-		return true;
-	}
-
-	if (ret < 0)
-	{
-		throw XenEvtchnException("Can't poll watches");
-	}
-
-	return false;
 }
 
 void XenEvtchn::notify()
@@ -115,7 +90,9 @@ void XenEvtchn::init(int domId, int port)
 		throw XenEvtchnException("Can't bind event channel");
 	}
 
-	DLOG(mLog, DEBUG) << "Create event channel, dom: " << domId << ", remote port: " << port << ", local port: " << mPort;
+	DLOG(mLog, DEBUG) << "Create event channel, dom: " << domId
+					  << ", remote port: " << port << ", local port: "
+					  << mPort;
 }
 
 void XenEvtchn::release()
@@ -131,6 +108,74 @@ void XenEvtchn::release()
 	}
 
 	DLOG(mLog, DEBUG) << "Delete event channel, local port: " << mPort;
+}
+
+void XenEvtchn::eventThread()
+{
+	try
+	{
+		while(!mTerminate)
+		{
+			if (waitEvent() && mCallback)
+			{
+				mCallback();
+			}
+		}
+	}
+	catch(const exception& e)
+	{
+		if (mErrorCallback)
+		{
+			mErrorCallback(e);
+		}
+		else
+		{
+			LOG(mLog, ERROR) << e.what();
+		}
+	}
+}
+
+bool XenEvtchn::waitEvent()
+{
+	pollfd fds;
+
+	fds.fd = xenevtchn_fd(mHandle);
+	fds.events = POLLIN;
+
+	auto ret = poll(&fds, 1, cPoolEventTimeoutMs);
+
+	if (ret < 0)
+	{
+		throw XenEvtchnException("Can't poll watches");
+	}
+
+	if (ret > 0)
+	{
+		auto port = xenevtchn_pending(mHandle);
+
+		if (port < 0)
+		{
+			throw XenEvtchnException("Can't get pending port");
+		}
+
+		if (xenevtchn_unmask(mHandle, port) < 0)
+		{
+			throw XenEvtchnException("Can't unmask event channel");
+		}
+
+		if (port != mPort)
+		{
+			throw XenEvtchnException("Error port number: " +
+									 to_string(port) + ", expected: " +
+									 to_string(mPort));
+		}
+
+		DLOG(mLog, DEBUG) << "Event received, port: " << mPort;
+
+		return true;
+	}
+
+	return false;
 }
 
 }

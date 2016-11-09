@@ -33,7 +33,8 @@ extern "C" {
 #include <xen/io/xenbus.h>
 }
 
-#include "DataChannel.hpp"
+#include "RingBufferBase.hpp"
+#include "XenEvtchn.hpp"
 #include "XenException.hpp"
 #include "XenStore.hpp"
 #include "Log.hpp"
@@ -116,7 +117,7 @@ public:
 	/**
 	 * Returns backend state
 	 */
-	xenbus_state getBackendState();
+	xenbus_state getBackendState() const;
 
 protected:
 	/**
@@ -128,9 +129,10 @@ protected:
 
 	/**
 	 * Add new data channel to the frontend handler.
-	 * @param[in] channel data channel instance
+	 * @param[in] evtchnPort port for the event channel
+	 * @param[in] ringBuffer the ring buffer instance
 	 */
-	void addChannel(std::shared_ptr<DataChannel> channel);
+	void addChannel(int evtchnPort, std::shared_ptr<RingBufferItf> ringBuffer);
 
 private:
 	int mId;
@@ -145,11 +147,14 @@ private:
 	std::string mXsBackendPath;
 	std::string mXsFrontendPath;
 
-	std::list<std::shared_ptr<DataChannel>> mChannels;
+	std::list<std::pair<std::shared_ptr<XenEvtchn>,
+						std::shared_ptr<RingBufferItf>>> mChannels;
 
 	bool mWaitForFrontendInitialising;
 
 	std::string mLogId;
+
+	mutable std::mutex mMutex;
 
 	Log mLog;
 
@@ -159,7 +164,7 @@ private:
 	void checkTerminatedChannels();
 	void frontendPathChanged(const std::string& path);
 	void frontendStateChanged(xenbus_state state);
-	void onXenStoreError(const std::exception& e);
+	void onXenError(const std::exception& e);
 	void setBackendState(xenbus_state state);
 };
 

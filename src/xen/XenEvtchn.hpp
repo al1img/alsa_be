@@ -21,6 +21,9 @@
 #ifndef SRC_XEN_XENEVTCHN_HPP_
 #define SRC_XEN_XENEVTCHN_HPP_
 
+#include <atomic>
+#include <thread>
+
 extern "C" {
 #include <xenevtchn.h>
 }
@@ -46,35 +49,52 @@ class XenEvtchnException : public XenException
 class XenEvtchn
 {
 public:
+	typedef std::function<void()> Callback;
+	typedef std::function<void(const std::exception&)> ErrorCallback;
+
 	/**
 	 * @param[in] domId domain id
 	 * @param[in] port  event channel port number
+	 * @param[in] callback callback which is called when the notification is
+	 * received
+	 * @param[in] errorCallback callback which is called when an error occurs
 	 */
-	XenEvtchn(int domId, int port);
+	XenEvtchn(int domId, int port, Callback callback,
+			  ErrorCallback errorCallback = nullptr);
 	XenEvtchn(const XenEvtchn&) = delete;
 	XenEvtchn& operator=(XenEvtchn const&) = delete;
 	~XenEvtchn();
-
-	/**
-	 * Waits for event notification.
-	 * @return <i>true</i> if notification is received
-	 */
-	bool waitEvent();
 
 	/**
 	 * Notify the event channel
 	 */
 	void notify();
 
+	/**
+	 * Returns event channel port
+	 */
+	int getPort() const { return mPort; }
+
 private:
+
 	const int cPoolEventTimeoutMs = 100;
 
-	xenevtchn_handle *mHandle;
 	int mPort;
+
+	Callback mCallback;
+	ErrorCallback mErrorCallback;
+
+	xenevtchn_handle *mHandle;
+
+	std::thread mThread;
+	std::atomic_bool mTerminate;
+
 	Log mLog;
 
 	void init(int domId, int port);
 	void release();
+	void eventThread();
+	bool waitEvent();
 };
 
 }
